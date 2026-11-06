@@ -38,7 +38,7 @@ void main() async {
 
   // Continue initialization after Flutter has rendered its first frame.
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    Future<void>(() async {
+    Future<void>.microtask(() async {
       try {
         final supportDir = await getApplicationSupportDirectory();
         final dbDir = Directory('${supportDir.path}/dorar_databases');
@@ -75,7 +75,7 @@ void main() async {
         debugPrint('Audio service initialization failed: $error');
         debugPrintStack(stackTrace: stackTrace);
       }
-    }());
+    });
   });
 }
 
