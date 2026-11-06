@@ -42,6 +42,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   QuranRecitationComparison? _result;
   Map<String, dynamic> _records = {};
   int _dailyTarget = 5;
+  bool _repeatReference = false;
   String _selectedReciter = 'ar.alafasy';
 
   Ayah? get _ayah => _ayahs.isEmpty ? null : _ayahs[_index];
@@ -53,6 +54,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _tabs = TabController(length: 2, vsync: this);
     _surah = widget.storage.getInt('sheikh_selected_surah', defaultValue: 1);
     _dailyTarget = widget.storage.getInt('hifz_daily_target', defaultValue: 5);
+    _repeatReference = widget.storage.getBool('hifz_repeat_reference', defaultValue: false);
     final savedReciter = widget.storage.getString('default_reciter', defaultValue: 'ar.alafasy');
     _selectedReciter = availableReciters.any((reciter) => reciter.id == savedReciter)
         ? savedReciter
@@ -246,6 +248,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       reciter: reciter,
     );
     try {
+      await _player.setReleaseMode(
+        _repeatReference ? ReleaseMode.loop : ReleaseMode.stop,
+      );
       await _player.play(UrlSource(url));
     } catch (_) {
       _toast('تعذّر تشغيل التلاوة المرجعية. تحقق من اتصال الإنترنت.');
@@ -520,6 +525,20 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                     icon: Icon(_listening ? Icons.stop_circle_outlined : Icons.mic_rounded),
                     label: Text(_listening ? 'إيقاف الاستماع' : 'ابدأ التسميع'),
                     style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: _repeatReference,
+                    title: const Text('تكرار الآية للحفظ'),
+                    subtitle: const Text('يكرر صوت القارئ حتى توقفه يدويًا'),
+                    secondary: const Icon(Icons.repeat_rounded),
+                    onChanged: (value) async {
+                      setState(() => _repeatReference = value);
+                      await widget.storage.setBool('hifz_repeat_reference', value);
+                      await _player.setReleaseMode(
+                        value ? ReleaseMode.loop : ReleaseMode.stop,
+                      );
+                    },
                   ),
                   if (_recognized.isNotEmpty) ...[
                     const SizedBox(height: 12),
