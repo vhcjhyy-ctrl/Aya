@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -43,6 +45,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
     'tirmidhi': 'جامع الترمذي',
     'nasai': 'سنن النسائي',
     'ibnmajah': 'سنن ابن ماجه',
+  };
+
+  static const Map<String, String> _bookNamesEnglish = {
+    'bukhari': 'Sahih al-Bukhari',
+    'muslim': 'Sahih Muslim',
+    'abudawud': 'Sunan Abu Dawud',
+    'tirmidhi': 'Jami at-Tirmidhi',
+    'nasai': 'Sunan an-Nasa’i',
+    'ibnmajah': 'Sunan Ibn Majah',
   };
 
   static const Set<String> _stopWords = {
@@ -213,7 +224,44 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   String _hadithBookName(dynamic rawBookId) {
     final bookId = rawBookId?.toString().replaceFirst(RegExp(r'^(ara|eng)_'), '') ?? '';
-    return _bookNames[bookId] ?? bookId;
+    return TranslationService.isArabic
+        ? (_bookNames[bookId] ?? bookId)
+        : (_bookNamesEnglish[bookId] ?? bookId);
+  }
+
+  String _hadithGrade(Map<String, dynamic> hadith) {
+    final rawGrades = hadith['grades'];
+    List<dynamic> grades = [];
+    try {
+      if (rawGrades is List) {
+        grades = rawGrades;
+      } else if (rawGrades is String && rawGrades.isNotEmpty) {
+        final decoded = jsonDecode(rawGrades);
+        if (decoded is List) grades = decoded;
+      }
+    } catch (_) {}
+
+    final labels = grades
+        .map((grade) => grade is Map
+            ? (grade['grade']?.toString() ?? '')
+            : grade.toString())
+        .where((label) => label.trim().isNotEmpty)
+        .toSet()
+        .toList();
+
+    if (labels.isNotEmpty) return labels.take(2).join('، ');
+
+    final bookId = hadith['book_id']
+            ?.toString()
+            .replaceFirst(RegExp(r'^(ara|eng)_'), '') ??
+        '';
+    if (bookId == 'bukhari' || bookId == 'muslim') {
+      return TranslationService.isArabic ? 'صحيح' : 'Sahih';
+    }
+
+    return TranslationService.isArabic
+        ? 'لم تُسجل درجة لهذا الحديث في البيانات المحلية'
+        : 'No grade is recorded for this narration in the local data';
   }
 
   @override
@@ -521,6 +569,16 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 color: gold,
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              TranslationService.isArabic
+                  ? 'درجة الحديث: ${_hadithGrade(hadith)}'
+                  : 'Grade: ${_hadithGrade(hadith)}',
+              style: TextStyle(
+                fontSize: 11,
+                color: theme.textTheme.bodySmall?.color,
               ),
             ),
           ],
