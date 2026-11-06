@@ -408,7 +408,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     await prefs.setBool("widget_is_dark", prefs.isDarkMode());
     await setStringIfChanged(
       "widget_app_name",
-      TranslationService.isArabic ? "آية" : "Aya",
+      TranslationService.isArabic ? "قلم مسلم" : "Qalam Muslim",
     );
 
     final localizedNextName = TranslationService.t(
