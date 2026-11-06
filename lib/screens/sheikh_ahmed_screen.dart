@@ -721,8 +721,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                   SwitchListTile.adaptive(
                     contentPadding: EdgeInsets.zero,
                     value: _repeatReference,
-                    title: const Text('تكرار الآية للحفظ'),
-                    subtitle: const Text('يكرر صوت القارئ حتى توقفه يدويًا'),
+                    title: const Text('تكرار التلاوة المرجعية'),
+                    subtitle: const Text('يكرر تسجيل السورة المرجعية كاملة حتى توقفه يدويًا'),
                     secondary: const Icon(Icons.repeat_rounded),
                     onChanged: (value) async {
                       setState(() => _repeatReference = value);
