@@ -149,9 +149,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
               if (_commandMode) {
                 _commandMode = false;
                 _status = 'لم ألتقط أمرًا صوتيًا. اضغط زر الميكروفون وحاول مجددًا.';
-              } else {
-                _compare();
               }
+              // Final speech results are compared in onResult only.
+              // Comparing here can accidentally treat a voice command as Quran recitation.
             });
           } else if (status == 'listening') {
             setState(() => _listening = true);
