@@ -219,10 +219,16 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         },
         onError: (_) {
           _assistantFinalResultHandled = true;
+          final failedDuringRecitation = _assistantConversationActive &&
+              _assistantPhase == _AssistantPhase.reciting;
+          if (failedDuringRecitation) {
+            _assistantPhase = _AssistantPhase.awaitingFeedback;
+            _assistantResultProcessing = false;
+          }
           if (mounted) setState(() {
             _listening = false;
             _assistantListening = false;
-            _status = 'تعذّر التعرف على الصوت. تحقق من إذن الميكروفون وخدمة التعرف العربية.';
+            _status = 'تعذّر التعرف على الصوت. تحقق من إذن الميكروفون وخدمة التعرف العربية ثم أعد المحاولة.';
           });
         },
       );
@@ -374,6 +380,13 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (mounted) setState(() {});
   }
 
+  void _rememberAssistantMessage(String role, String content) {
+    _assistantHistory.add({'role': role, 'content': content});
+    if (_assistantHistory.length > 10) {
+      _assistantHistory.removeRange(0, _assistantHistory.length - 10);
+    }
+  }
+
   Future<void> _assistantSpeak(String message) async {
     if (!_ttsReady) {
       _toast(message);
@@ -399,9 +412,15 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     await _listenForAssistantReply();
   }
 
-  Future<void> _assistantSpeakAndListen(String message) async {
+  Future<void> _assistantSpeakAndListen(
+    String message, {
+    bool rememberInModelHistory = true,
+  }) async {
     if (!_assistantConversationActive) return;
     _addAssistantTranscript('assistant', message);
+    if (rememberInModelHistory) {
+      _rememberAssistantMessage('assistant', message);
+    }
     await _assistantSpeak(message);
     if (_assistantConversationActive) {
       await _listenForAssistantReply();
@@ -455,6 +474,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       return;
     }
     _addAssistantTranscript('user', input);
+    _rememberAssistantMessage('user', input);
 
     final command = QuranVoiceIntent.parseCommand(input);
     if (command == QuranVoiceCommand.stop) {
@@ -623,6 +643,24 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       expected: _ayah!.text,
       recognized: recognizedText,
     );
+    _addAssistantTranscript('user', 'التلاوة التي التقطها الهاتف: ' + recognizedText);
+    final resultNotes = <String>[
+      'نتيجة التسميع للسورة رقم ' + _surah.toString() +
+          ' والآية ' + _ayah!.numberInSurah.toString() + '.',
+      'النص الذي التقطه الهاتف: ' + recognizedText,
+      if (result.missingWords.isNotEmpty)
+        'كلمات لم يلتقطها الهاتف: ' + result.missingWords.join('، '),
+      if (result.extraWords.isNotEmpty)
+        'كلمات إضافية التقطها الهاتف: ' + result.extraWords.join('، '),
+      if (result.outOfOrderWords.isNotEmpty)
+        'مواضع ترتيب مختلفة: ' +
+            result.outOfOrderWords
+                .map((issue) => issue.expectedWord + ' / ' + issue.recognizedWord)
+                .join('، '),
+      'هذه مخرجات تحويل صوت إلى نص تقريبية وليست حكمًا على صحة التلاوة.',
+    ];
+    _rememberAssistantMessage('user', resultNotes.join('\n'));
+
     setState(() {
       _recognized = recognizedText;
       _result = result;
@@ -705,11 +743,6 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 - لا تصدر فتاوى. عند السؤال الشرعي وجّه المستخدم إلى مصدر موثوق أو عالم مؤهل.
 - دورك المساندة في الحفظ، التشجيع، تنظيم المراجعة، والإجابة العامة المختصرة.
 ''';
-    _assistantHistory.add({'role': 'user', 'content': userMessage});
-    if (_assistantHistory.length > 10) {
-      _assistantHistory.removeRange(0, _assistantHistory.length - 10);
-    }
-
     final messages = <Map<String, String>>[
       {
         'role': 'system',
@@ -735,11 +768,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (reply.isEmpty) {
       reply = 'أنا معك. هل نتابع الحفظ أم تريد أن نتحدث قليلًا عن خطتك؟';
     }
-    _assistantHistory.add({'role': 'assistant', 'content': reply});
-    if (_assistantHistory.length > 10) {
-      _assistantHistory.removeRange(0, _assistantHistory.length - 10);
-    }
-    await _assistantSpeakAndListen(reply);
+    await _assistantSpeakAndListen(
+      reply,
+      rememberInModelHistory: false,
+    );
   }
 
   Future<void> _stopVoiceAssistant() async {
