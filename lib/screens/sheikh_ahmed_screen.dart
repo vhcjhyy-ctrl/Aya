@@ -44,6 +44,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   int _dailyTarget = 5;
   bool _repeatReference = false;
   bool _blindRecallMode = false;
+  bool _commandMode = false;
   String _selectedReciter = 'ar.alafasy';
 
   Ayah? get _ayah => _ayahs.isEmpty ? null : _ayahs[_index];
@@ -84,7 +85,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           if (status == 'notListening' || status == 'done') {
             setState(() {
               _listening = false;
-              _compare();
+              if (!_commandMode) _compare();
             });
           } else if (status == 'listening') {
             setState(() => _listening = true);
@@ -207,11 +208,16 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           if (!mounted) return;
           setState(() {
             _recognized = event.recognizedWords;
-            if (event.finalResult) {
-              _compare();
-              _listening = false;
-            }
+            if (event.finalResult) _listening = false;
           });
+          if (event.finalResult) {
+            if (_commandMode) {
+              _commandMode = false;
+              unawaited(_handleVoiceCommand(event.recognizedWords));
+            } else {
+              _compare();
+            }
+          }
         },
       );
     } catch (_) {
@@ -219,6 +225,94 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         _listening = false;
         _status = 'لم يبدأ الميكروفون. تحقق من إذن التسجيل.';
       });
+    }
+  }
+
+  Future<void> _startVoiceCommand() async {
+    if (!_speechReady) {
+      _toast('خدمة الأوامر الصوتية العربية غير متاحة على هذا الجهاز.');
+      return;
+    }
+    await _player.stop();
+    await _tts.stop();
+    _commandMode = true;
+    setState(() {
+      _recognized = '';
+      _listening = true;
+      _status = 'استمع إلى أمر قصير: التالي، السابق، كرر، أظهر الآية، أو ابدأ التسميع.';
+    });
+    try {
+      await _speech.listen(
+        localeId: _locale,
+        listenFor: const Duration(seconds: 8),
+        pauseFor: const Duration(seconds: 2),
+        onResult: (event) {
+          if (!mounted) return;
+          setState(() {
+            _recognized = event.recognizedWords;
+            if (event.finalResult) _listening = false;
+          });
+          if (event.finalResult && _commandMode) {
+            _commandMode = false;
+            unawaited(_handleVoiceCommand(event.recognizedWords));
+          }
+        },
+      );
+    } catch (_) {
+      _commandMode = false;
+      if (mounted) setState(() {
+        _listening = false;
+        _status = 'تعذّر تشغيل الأوامر الصوتية. تحقق من إذن الميكروفون.';
+      });
+    }
+  }
+
+  Future<void> _handleVoiceCommand(String rawCommand) async {
+    final command = rawCommand
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ى', 'ي')
+        .trim()
+        .toLowerCase();
+    if (command.isEmpty) {
+      _toast('لم ألتقط أمرًا واضحًا. حاول مرة أخرى.');
+      return;
+    }
+    if (command.contains('التالي') || command.contains('بعدها')) {
+      await _move(1);
+      return;
+    }
+    if (command.contains('السابق') || command.contains('قبل')) {
+      await _move(-1);
+      return;
+    }
+    if (command.contains('كرر') || command.contains('اعاده') || command.contains('استمع') || command.contains('شغل')) {
+      await _playReference();
+      return;
+    }
+    if (command.contains('اخف') || command.contains('اخفي')) {
+      setState(() => _showText = false);
+      await _announce('أخفيت نص الآية. ابدأ التسميع من حفظك.');
+      return;
+    }
+    if (command.contains('اظهر') || command.contains('اعرض')) {
+      setState(() => _showText = true);
+      await _announce('أظهرت نص الآية.');
+      return;
+    }
+    if (command.contains('ابدأ') || command.contains('سمع') || command.contains('تسميع')) {
+      await _start();
+      return;
+    }
+    await _announce('لم أفهم الأمر. قل التالي، السابق، كرر، أظهر الآية، أخف الآية، أو ابدأ التسميع.');
+  }
+
+  Future<void> _announce(String message) async {
+    _toast(message);
+    if (_ttsReady) {
+      await _tts.stop();
+      await _tts.speak(message);
     }
   }
 
@@ -423,6 +517,11 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             ),
             title: const Text('مساعد التسميع الصوتي', style: TextStyle(fontWeight: FontWeight.bold)),
             subtitle: const Text('الشيخ أحمد محمد · مساعد آلي'),
+          trailing: IconButton(
+            tooltip: 'الأوامر الصوتية',
+            onPressed: _listening ? null : _startVoiceCommand,
+            icon: const Icon(Icons.mic_external_on_outlined),
+          ),
           ),
         ),
         const SizedBox(height: 12),
