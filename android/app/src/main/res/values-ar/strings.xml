@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">آية</string>
-    <string name="widget_app_subtitle">آية</string>
+    <string name="app_name">قلم مسلم</string>
+    <string name="widget_app_subtitle">قلم مسلم</string>
 
-    <string name="widget_prayer_times_label">آية - مواقيت الصلاة</string>
+    <string name="widget_prayer_times_label">قلم مسلم - مواقيت الصلاة</string>
     <string name="widget_prayer_times_title">مواقيت الصلاة</string>
     <string name="widget_prayer_times_description">يعرض مواقيت الصلاة لليوم حسب موقعك الجغرافي.</string>
     
