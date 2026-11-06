@@ -339,7 +339,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       if (!mounted) return;
       setState(() {
         _assistantReady = true;
-        _assistantModelStatus = 'المساعد جاهز على هذا الجهاز';
+        _assistantModelStatus = _localAssistant.gpuAccelerationEnabled
+          ? 'المساعد جاهز — تسريع GPU'
+          : 'المساعد جاهز — CPU';
       });
       await _startVoiceAssistant();
     } catch (error) {
@@ -481,6 +483,12 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       await _stopVoiceAssistant();
       return;
     }
+    if (command == QuranVoiceCommand.pauseRecitation) {
+      await _assistantSpeak(
+        'أوقفت الاستماع مؤقتًا. اضغط استمع مجددًا أو تحدث عندما تكون مستعدًا للمتابعة.',
+      );
+      return;
+    }
 
     if (_assistantPhase == _AssistantPhase.askingWhatMemorized) {
       final surahNumber = QuranVoiceIntent.findSurahNumber(input);
@@ -561,6 +569,11 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             'سجلت هذه الآية للمراجعة القريبة، وحددت تذكير المراجعة بعد اثنتي عشرة ساعة. هل تعيد التسميع أم ننتقل؟',
           );
           return;
+        case QuranVoiceCommand.pauseRecitation:
+          await _assistantSpeak(
+            'أوقفت الاستماع مؤقتًا. يمكنك استئنافه من زر استمع مجددًا.',
+          );
+          return;
         case QuranVoiceCommand.stop:
         case QuranVoiceCommand.unknown:
           await _assistantDiscuss(
@@ -636,15 +649,36 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       return;
     }
 
+    final recitationText =
+        normalizedCommand == QuranVoiceCommand.pauseRecitation
+            ? QuranVoiceIntent.stripTrailingPauseCommand(recognizedText)
+            : recognizedText.trim();
+    if (recitationText.isEmpty) {
+      setState(() {
+        _assistantPhase = _AssistantPhase.awaitingFeedback;
+        _result = null;
+        _recognized = '';
+        _status = 'تم إيقاف التسميع قبل التقاط كلمات كافية.';
+      });
+      _assistantResultProcessing = false;
+      await _assistantSpeakAndListen(
+        'أوقفت التسميع. لم أحتسب أمر الإيقاف على أنه من الآية. قل كرر لإعادة المحاولة، أو إنهاء الجلسة لإغلاق المساعد.',
+      );
+      return;
+    }
+
     final result = QuranRecitationMatcher.compare(
       expected: _ayah!.text,
-      recognized: recognizedText,
+      recognized: recitationText,
     );
-    _addAssistantTranscript('user', 'التلاوة التي التقطها الهاتف: ' + recognizedText);
+    _addAssistantTranscript(
+      'user',
+      'التلاوة التي التقطها الهاتف: ' + recitationText,
+    );
     final resultNotes = <String>[
       'نتيجة التسميع للسورة رقم ' + _surah.toString() +
           ' والآية ' + _ayah!.numberInSurah.toString() + '.',
-      'النص الذي التقطه الهاتف: ' + recognizedText,
+      'النص الذي التقطه الهاتف: ' + recitationText,
       if (result.missingWords.isNotEmpty)
         'كلمات لم يلتقطها الهاتف: ' + result.missingWords.join('، '),
       if (result.extraWords.isNotEmpty)
@@ -659,7 +693,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _rememberAssistantMessage('user', resultNotes.join('\n'));
 
     setState(() {
-      _recognized = recognizedText;
+      _recognized = recitationText;
       _result = result;
       _listening = false;
       _assistantListening = false;

@@ -4,6 +4,7 @@ import 'quran_recitation_matcher.dart';
 enum QuranVoiceCommand {
   start,
   stop,
+  pauseRecitation,
   next,
   previous,
   repeat,
@@ -17,6 +18,18 @@ enum QuranVoiceCommand {
 /// Arabic voice-intent helpers. Surah names are resolved against the app's
 /// bundled Quran catalogue; the language model is not asked to invent a match.
 class QuranVoiceIntent {
+  static const Set<String> _pauseCommands = {
+    'قف',
+    'وقف',
+    'اقف',
+    'توقف',
+    'ايقاف',
+    'استني',
+    'استنى',
+    'انتظر',
+    'تمهل',
+  };
+
   static String normalize(String text) {
     return QuranRecitationMatcher.normalizeWords(text)
         .join(' ')
@@ -52,16 +65,31 @@ class QuranVoiceIntent {
     return null;
   }
 
+  static String stripTrailingPauseCommand(String spokenText) {
+    final trimmed = spokenText.trim();
+    if (trimmed.isEmpty) return '';
+    final words = trimmed.split(RegExp(r'\\s+'));
+    if (words.isNotEmpty && _pauseCommands.contains(normalize(words.last))) {
+      words.removeLast();
+    }
+    return words.join(' ').trim();
+  }
+
   static QuranVoiceCommand parseCommand(String spokenText) {
     final phrase = normalize(spokenText);
     final words = phrase.split(' ').where((word) => word.isNotEmpty).toSet();
 
-    if (words.any(const {'قف', 'وقف', 'اقف', 'توقف', 'ايقاف', 'انهاء', 'انهي', 'استنى', 'استني', 'انتظر', 'تمهل'}.contains) ||
-        phrase.contains('انهاء الجلسه') ||
+    if (phrase.contains('انهاء الجلسه') ||
         phrase.contains('انهي الجلسه') ||
+        phrase.contains('انهاء الحوار') ||
+        phrase.contains('انهي الحوار') ||
         phrase.contains('اقفل المساعد') ||
         phrase.contains('اقفل الجلسه')) {
       return QuranVoiceCommand.stop;
+    }
+    if (_pauseCommands.contains(phrase) ||
+        _pauseCommands.any((command) => phrase.endsWith(' ' + command))) {
+      return QuranVoiceCommand.pauseRecitation;
     }
     if (words.any(const {'التالي', 'كمل', 'اكمل', 'تابع'}.contains) ||
         phrase.contains('الايه التاليه')) {

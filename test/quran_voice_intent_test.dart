@@ -20,22 +20,26 @@ void main() {
       );
       expect(
         QuranVoiceIntent.parseCommand('قف'),
-        QuranVoiceCommand.stop,
+        QuranVoiceCommand.pauseRecitation,
       );
       expect(
         QuranVoiceIntent.parseCommand('اقف'),
-        QuranVoiceCommand.stop,
+        QuranVoiceCommand.pauseRecitation,
       );
       expect(
         QuranVoiceIntent.parseCommand('استنى'),
-        QuranVoiceCommand.stop,
+        QuranVoiceCommand.pauseRecitation,
       );
       expect(
         QuranVoiceIntent.parseCommand('استني'),
-        QuranVoiceCommand.stop,
+        QuranVoiceCommand.pauseRecitation,
       );
       expect(
         QuranVoiceIntent.parseCommand('تمهل'),
+        QuranVoiceCommand.pauseRecitation,
+      );
+      expect(
+        QuranVoiceIntent.parseCommand('اقفل المساعد'),
         QuranVoiceCommand.stop,
       );
       expect(
@@ -45,6 +49,17 @@ void main() {
       expect(
         QuranVoiceIntent.parseCommand('كمل'),
         QuranVoiceCommand.next,
+      );
+    });
+
+    test('removes a trailing pause command from recognized recitation', () {
+      expect(
+        QuranVoiceIntent.stripTrailingPauseCommand('الحمد لله رب العالمين قف'),
+        'الحمد لله رب العالمين',
+      );
+      expect(
+        QuranVoiceIntent.stripTrailingPauseCommand('اقف'),
+        isEmpty,
       );
     });
 
