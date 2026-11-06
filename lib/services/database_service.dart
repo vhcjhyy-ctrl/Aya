@@ -14,7 +14,7 @@ class DatabaseService {
   static Future<void>? _seeding;
   static const int _version = 12;
   // Keep in sync with android/app/build.gradle.kts applicationId
-  static const String _packageName = 'com.quran.aya';
+  static const String _packageName = 'com.ahmed.qalammuslim';
 
   HadithDatabaseService? _hadith;
 
