@@ -9,6 +9,8 @@ enum QuranVoiceCommand {
   repeat,
   showAyah,
   hideAyah,
+  markMemorized,
+  needsReview,
   unknown,
 }
 
@@ -57,7 +59,8 @@ class QuranVoiceIntent {
     if (words.any(const {'قف', 'وقف', 'اقف', 'توقف', 'ايقاف', 'انهاء', 'انهي', 'استنى', 'انتظر'}.contains) ||
         phrase.contains('انهاء الجلسه') ||
         phrase.contains('انهي الجلسه') ||
-        phrase.contains('اقفل المساعد')) {
+        phrase.contains('اقفل المساعد') ||
+        phrase.contains('اقفل الجلسه')) {
       return QuranVoiceCommand.stop;
     }
     if (words.any(const {'التالي', 'كمل', 'اكمل', 'تابع'}.contains) ||
@@ -82,6 +85,25 @@ class QuranVoiceIntent {
         phrase.contains('ابدأ التسميع') ||
         phrase.contains('ابدا التسميع')) {
       return QuranVoiceCommand.start;
+    }
+    if (words.any(const {
+      'احفظها',
+      'احفظ',
+      'حفظتها',
+      'سجلها',
+      'سجل',
+      'اتقنتها',
+      'اتقنت',
+    }.contains) ||
+        phrase.contains('سجلها في الحفظ') ||
+        phrase.contains('اضفها للمحفوظ')) {
+      return QuranVoiceCommand.markMemorized;
+    }
+    if (words.any(const {'راجعها', 'راجع', 'مراجعه', 'صعبه'}.contains) ||
+        phrase.contains('احتاج مراجعه') ||
+        phrase.contains('تحتاج مراجعه') ||
+        phrase.contains('خليها مراجعه')) {
+      return QuranVoiceCommand.needsReview;
     }
     return QuranVoiceCommand.unknown;
   }

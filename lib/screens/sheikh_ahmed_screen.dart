@@ -531,6 +531,18 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         case QuranVoiceCommand.start:
           await _startAssistantRecitation();
           return;
+        case QuranVoiceCommand.markMemorized:
+          await _memorized();
+          await _assistantSpeakAndListen(
+            'سجلت الآية في محفوظاتك، وحددت موعد مراجعتها وفق خطة المراجعة المتباعدة. هل ننتقل إلى الآية التالية؟',
+          );
+          return;
+        case QuranVoiceCommand.needsReview:
+          await _needsReview();
+          await _assistantSpeakAndListen(
+            'سجلت هذه الآية للمراجعة القريبة، وحددت تذكير المراجعة بعد اثنتي عشرة ساعة. هل تعيد التسميع أم ننتقل؟',
+          );
+          return;
         case QuranVoiceCommand.stop:
         case QuranVoiceCommand.unknown:
           await _assistantDiscuss(

@@ -57,6 +57,25 @@ void main() {
       );
     });
 
+    test('recognizes verbal memorized and review decisions', () {
+      expect(
+        QuranVoiceIntent.parseCommand('سجلها في الحفظ'),
+        QuranVoiceCommand.markMemorized,
+      );
+      expect(
+        QuranVoiceIntent.parseCommand('احفظها'),
+        QuranVoiceCommand.markMemorized,
+      );
+      expect(
+        QuranVoiceIntent.parseCommand('أحتاج مراجعة'),
+        QuranVoiceCommand.needsReview,
+      );
+      expect(
+        QuranVoiceIntent.parseCommand('خليها مراجعة'),
+        QuranVoiceCommand.needsReview,
+      );
+    });
+
     test('does not invent an unknown surah', () {
       expect(QuranVoiceIntent.findSurahNumber('سورة غير موجودة'), isNull);
     });
