@@ -42,6 +42,9 @@ jobs:
         continue-on-error: true
         run: flutter analyze --no-pub
 
+      - name: Run Quran recitation comparison tests
+        run: flutter test --no-pub test/quran_recitation_matcher_test.dart
+
       - name: Build optimized ARM64 release
         run: |
           flutter build apk --flavor fdroid --release --target-platform android-arm64

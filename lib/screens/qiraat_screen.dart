@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import '../models/quran_models.dart';
 import '../services/api_service.dart';
 import '../services/translation_service.dart';
+import '../services/reciters_cache_service.dart';
 
 class QiraatScreen extends StatefulWidget {
   const QiraatScreen({super.key});
@@ -55,14 +56,23 @@ class _QiraatScreenState extends State<QiraatScreen> {
       final lang = TranslationService.isArabic ? 'ar' : 'en';
       final res = await http.get(
         Uri.parse('https://mp3quran.net/api/v3/riwayat?language=$lang'),
-      );
+      ).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         final data = json.decode(utf8.decode(res.bodyBytes));
+        final riwayata = List<dynamic>.from(data['riwayat'] ?? []);
+        final preferred = riwayata.where((r) => r['id'] == 1).firstOrNull ??
+            (riwayata.isNotEmpty ? riwayata.first : null);
         if (mounted) {
           setState(() {
-            _riwayat = data['riwayat'];
+            _riwayat = riwayata;
+            _selectedRiwayah = preferred == null
+                ? null
+                : Map<String, dynamic>.from(preferred as Map);
             _isLoadingRiwayat = false;
           });
+        }
+        if (preferred != null) {
+          await _fetchReciters(preferred['id'] as int);
         }
       }
     } catch (e) {
@@ -78,29 +88,19 @@ class _QiraatScreenState extends State<QiraatScreen> {
       _stopAudio();
     });
     try {
-      final lang = TranslationService.isArabic ? 'ar' : 'en';
-      final res = await http.get(
-        Uri.parse(
-          'https://mp3quran.net/api/v3/reciters?language=$lang&rewaya=$riwayahId',
-        ),
-      );
-      if (res.statusCode == 200) {
-        final data = json.decode(utf8.decode(res.bodyBytes));
-        if (mounted) {
-          final rawReciters = List<dynamic>.from(data['reciters'] ?? []);
-          rawReciters.sort((a, b) {
-            final nameA = (a['name'] as String?) ?? '';
-            final nameB = (b['name'] as String?) ?? '';
-            return nameA.compareTo(nameB);
-          });
-          setState(() {
-            _reciters = rawReciters;
-            _isLoadingReciters = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoadingReciters = false);
+      final values = await RecitersCacheService.getRecitersForRiwayah(riwayahId)
+          .timeout(const Duration(seconds: 12));
+      if (mounted) setState(() {
+        _reciters = values;
+        _selectedReciter = values.isEmpty ? null : values.first;
+        _isLoadingReciters = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() {
+        _reciters = [];
+        _selectedReciter = null;
+        _isLoadingReciters = false;
+      });
     }
   }
 
@@ -152,7 +152,7 @@ class _QiraatScreenState extends State<QiraatScreen> {
           if (_isLoadingRiwayat)
             const Padding(
               padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: Color(0xFFE5C158)),
+              child: CircularProgressIndicator(color: Color(0xFFD6BC87)),
             )
           else if (_riwayat.isNotEmpty)
             Padding(
@@ -187,7 +187,7 @@ class _QiraatScreenState extends State<QiraatScreen> {
           if (_isLoadingReciters)
             const Padding(
               padding: EdgeInsets.all(20),
-              child: CircularProgressIndicator(color: Color(0xFFE5C158)),
+              child: CircularProgressIndicator(color: Color(0xFFD6BC87)),
             )
           else if (_reciters.isNotEmpty)
             Padding(
@@ -219,6 +219,19 @@ class _QiraatScreenState extends State<QiraatScreen> {
               ),
             ),
 
+          if (!_isLoadingReciters && _reciters.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(
+                  TranslationService.isArabic
+                      ? 'متاح ' + _reciters.length.toString() + ' قارئًا لهذه الرواية'
+                      : _reciters.length.toString() + ' reciters available for this reading',
+                  style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.w600, fontSize: 12),
+                ),
+              ),
+            ),
           const SizedBox(height: 16),
           Expanded(
             child: _selectedReciter == null
@@ -238,7 +251,7 @@ class _QiraatScreenState extends State<QiraatScreen> {
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundColor: isPlaying
-                              ? const Color(0xFFE5C158)
+                              ? const Color(0xFFD6BC87)
                               : theme.cardColor,
                           child: Text(
                             '${surah.number}',
@@ -257,7 +270,7 @@ class _QiraatScreenState extends State<QiraatScreen> {
                             isPlaying
                                 ? Icons.stop_circle
                                 : Icons.play_circle_fill,
-                            color: const Color(0xFFE5C158),
+                            color: const Color(0xFFD6BC87),
                           ),
                           onPressed: () {
                             if (isPlaying) {
@@ -295,7 +308,7 @@ class _QiraatScreenState extends State<QiraatScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Slider(
-                    activeColor: const Color(0xFFE5C158),
+                    activeColor: const Color(0xFFD6BC87),
                     value: _position.inSeconds.toDouble(),
                     max: _duration.inSeconds > 0
                         ? _duration.inSeconds.toDouble()

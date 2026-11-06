@@ -120,7 +120,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
               ? "حذف جميع التحميلات؟"
               : "Delete all downloads?",
           style: const TextStyle(
-            color: Color(0xFFE5C158),
+            color: Color(0xFFD6BC87),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -212,7 +212,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.translate, color: Color(0xFFE5C158)),
+            icon: const Icon(Icons.translate, color: Color(0xFFD6BC87)),
             tooltip: TranslationService.isArabic
                 ? "ترجمات القرآن"
                 : "Translations",
@@ -222,7 +222,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
       ),
       body: _isLoadingList
           ? const Center(
-              child: CircularProgressIndicator(color: Color(0xFFE5C158)),
+              child: CircularProgressIndicator(color: Color(0xFFD6BC87)),
             )
           : ListView.builder(
               physics: const BouncingScrollPhysics(),
@@ -237,7 +237,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                       color: theme.cardColor,
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: const Color(0xFFE5C158).withValues(alpha: 0.2),
+                        color: const Color(0xFFD6BC87).withValues(alpha: 0.2),
                         width: 1.5,
                       ),
                       boxShadow: [
@@ -265,7 +265,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                                   style: const TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 13,
-                                    color: Color(0xFFE5C158),
+                                    color: Color(0xFFD6BC87),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -299,7 +299,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: const Color(
-                                    0xFFE5C158,
+                                    0xFFD6BC87,
                                   ).withValues(alpha: 0.12),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
@@ -308,7 +308,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFFE5C158),
+                                    color: Color(0xFFD6BC87),
                                   ),
                                 ),
                               ),
@@ -322,7 +322,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                             backgroundColor: Theme.of(
                               context,
                             ).dividerColor.withValues(alpha: 0.12),
-                            color: const Color(0xFFE5C158),
+                            color: const Color(0xFFD6BC87),
                             minHeight: 6,
                           ),
                         ),
@@ -356,14 +356,14 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                                 icon: const Icon(
                                   Icons.library_music_outlined,
                                   size: 14,
-                                  color: Color(0xFFE5C158),
+                                  color: Color(0xFFD6BC87),
                                 ),
                                 label: Text(
                                   TranslationService.isArabic
                                       ? "اختر وحمّل تلاوة"
                                       : "Choose & Download",
                                   style: const TextStyle(
-                                    color: Color(0xFFE5C158),
+                                    color: Color(0xFFD6BC87),
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
                                   ),
@@ -431,7 +431,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                           child: OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               side: BorderSide(
-                                color: const Color(0xFFE5C158)
+                                color: const Color(0xFFD6BC87)
                                     .withValues(alpha: 0.4),
                               ),
                               padding:
@@ -443,7 +443,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                             icon: const Icon(
                               Icons.translate,
                               size: 16,
-                              color: Color(0xFFE5C158),
+                              color: Color(0xFFD6BC87),
                             ),
                             label: Text(
                               TranslationService.isArabic
@@ -452,7 +452,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                               style: const TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFE5C158),
+                                color: Color(0xFFD6BC87),
                               ),
                             ),
                             onPressed: _openTranslationPicker,
@@ -471,12 +471,12 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                             : 'Unknown Reciter');
 
                   return Card(
-                    color: const Color(0xFFE5C158).withValues(alpha: 0.15),
+                    color: const Color(0xFFD6BC87).withValues(alpha: 0.15),
                     margin: const EdgeInsets.only(bottom: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: BorderSide(
-                        color: const Color(0xFFE5C158).withValues(alpha: 0.5),
+                        color: const Color(0xFFD6BC87).withValues(alpha: 0.5),
                         width: 1,
                       ),
                     ),
@@ -486,7 +486,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                         children: [
                           const Icon(
                             Icons.mic,
-                            color: Color(0xFFE5C158),
+                            color: Color(0xFFD6BC87),
                             size: 28,
                           ),
                           const SizedBox(width: 16),
@@ -510,7 +510,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFFE5C158),
+                                    color: Color(0xFFD6BC87),
                                   ),
                                 ),
                               ],
@@ -519,7 +519,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
                           IconButton(
                             icon: const Icon(
                               Icons.download,
-                              color: Color(0xFFE5C158),
+                              color: Color(0xFFD6BC87),
                             ),
                             onPressed: () {
                               QuranDownloadService.instance.downloadAll(
@@ -652,7 +652,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
             child: CircularProgressIndicator(
               value: state.progress,
               strokeWidth: 2.5,
-              color: const Color(0xFFE5C158),
+              color: const Color(0xFFD6BC87),
               backgroundColor: Theme.of(context).dividerColor.withValues(alpha: 0.12),
             ),
           ),
@@ -678,7 +678,7 @@ class _QuranDownloadScreenState extends State<QuranDownloadScreen> {
       );
     } else {
       return IconButton(
-        icon: const Icon(Icons.cloud_download, color: Color(0xFFE5C158)),
+        icon: const Icon(Icons.cloud_download, color: Color(0xFFD6BC87)),
         onPressed: () =>
             QuranDownloadService.instance.downloadSurah(surahNum, _reciter),
       );
@@ -775,7 +775,7 @@ class _TranslationPickerSheetState extends State<_TranslationPickerSheet> {
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Color(0xFFE5C158),
+              color: Color(0xFFD6BC87),
             ),
           ),
           const SizedBox(height: 4),
@@ -793,7 +793,7 @@ class _TranslationPickerSheetState extends State<_TranslationPickerSheet> {
           if (_loading)
             const Padding(
               padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(color: Color(0xFFE5C158)),
+              child: CircularProgressIndicator(color: Color(0xFFD6BC87)),
             )
           else
             Flexible(
@@ -810,12 +810,12 @@ class _TranslationPickerSheetState extends State<_TranslationPickerSheet> {
                     margin: const EdgeInsets.only(bottom: 8),
                     decoration: BoxDecoration(
                       color: isActive
-                          ? const Color(0xFFE5C158).withValues(alpha: 0.08)
+                          ? const Color(0xFFD6BC87).withValues(alpha: 0.08)
                           : theme.cardColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isActive
-                            ? const Color(0xFFE5C158)
+                            ? const Color(0xFFD6BC87)
                             : theme.dividerColor.withValues(alpha: 0.1),
                         width: isActive ? 1.5 : 1.0,
                       ),
@@ -827,7 +827,7 @@ class _TranslationPickerSheetState extends State<_TranslationPickerSheet> {
                             ? Icons.verified_outlined
                             : (isFull ? Icons.check_circle : Icons.translate),
                         color: isActive
-                            ? const Color(0xFFE5C158)
+                            ? const Color(0xFFD6BC87)
                             : (isFull ? Colors.green : theme.disabledColor),
                         size: 20,
                       ),
@@ -879,7 +879,7 @@ class _TranslationPickerSheetState extends State<_TranslationPickerSheet> {
                                   child: CircularProgressIndicator(
                                     value: progress > 0 ? progress : null,
                                     strokeWidth: 2,
-                                    color: const Color(0xFFE5C158),
+                                    color: const Color(0xFFD6BC87),
                                   ),
                                 ),
                                 const SizedBox(width: 6),
@@ -949,7 +949,7 @@ class _TranslationPickerSheetState extends State<_TranslationPickerSheet> {
                           else
                             ElevatedButton.icon(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFE5C158),
+                                backgroundColor: const Color(0xFFD6BC87),
                                 foregroundColor: Colors.black,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
@@ -1103,74 +1103,72 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
     return svc.updateCountForReciter(reciter);
   }
 
+  void _sortReciters(List<Map<String, String>> reciters) {
+    final isAr = TranslationService.isArabic;
+    reciters.sort((a, b) {
+      final qa = isAr ? a['quraaAr']! : a['quraaEn']!;
+      final qb = isAr ? b['quraaAr']! : b['quraaEn']!;
+      final cmp = qa.compareTo(qb);
+      if (cmp != 0) return cmp;
+      final na = isAr ? a['nameAr']! : a['nameEn']!;
+      final nb = isAr ? b['nameAr']! : b['nameEn']!;
+      return na.compareTo(nb);
+    });
+  }
+
   Future<void> _fetchAndLoad() async {
-    final List<Map<String, String>> reciters = [];
+    final reciters = availableReciters.map((r) => <String, String>{
+      'id': r.id,
+      'nameAr': r.nameAr,
+      'nameEn': r.nameEn,
+      'quraaAr': 'حفص عن عاصم',
+      'quraaEn': "Hafs A'n Assem",
+    }).toList();
+    _sortReciters(reciters);
+    if (mounted) setState(() {
+      _allReciters = reciters;
+      _loading = false;
+    });
+    unawaited(_loadCountForReciter(widget.currentReciter));
+    unawaited(_loadDynamicReciters());
+  }
 
-    // Add static reciters
-    for (final r in availableReciters) {
-      reciters.add({
-        'id': r.id,
-        'nameAr': r.nameAr,
-        'nameEn': r.nameEn,
-        'quraaAr': 'حفص عن عاصم',
-        'quraaEn': "Hafs A'n Assem",
-      });
-    }
-
-    // Fetch dynamic reciters — dedup by server URL since the
-    // same reciter may appear in multiple riwayat from the API.
+  Future<void> _loadCountForReciter(String id) async {
     try {
-      final list = await RecitersCacheService.getAllReciters();
-      final seenServers = <String>{};
-      // Pre-populate with static reciter IDs so we don't duplicate them
-      for (final r in availableReciters) {
-        seenServers.add(r.id);
-      }
-      for (final r in list) {
-        final moshafs = r['moshaf'] as List;
-        for (final m in moshafs) {
-          final server = m['server'] as String;
+      final count = await _countDownloadedSurahs(id);
+      if (mounted) setState(() => _counts[id] = count);
+    } catch (_) {}
+  }
+
+  Future<void> _loadDynamicReciters() async {
+    try {
+      final list = await RecitersCacheService.getAllReciters().timeout(const Duration(seconds: 12));
+      final extra = <Map<String, String>>[];
+      final seen = <String>{for (final r in availableReciters) r.id};
+      for (final reciter in list) {
+        final moshafs = reciter['moshaf'] as List? ?? const [];
+        for (final raw in moshafs) {
+          final m = raw as Map;
+          final server = m['server']?.toString() ?? '';
+          if (server.isEmpty) continue;
           final id = 'mp3quran_server_$server';
-          if (seenServers.add(id)) {
-            reciters.add({
+          if (seen.add(id)) {
+            extra.add({
               'id': id,
-              'nameAr': r['name'] as String,
-              'nameEn': r['name'] as String,
-              'quraaAr': m['name'] as String,
-              'quraaEn': m['name'] as String,
+              'nameAr': (reciter['name'] ?? '').toString(),
+              'nameEn': (reciter['name'] ?? '').toString(),
+              'quraaAr': (m['name'] ?? '').toString(),
+              'quraaEn': (m['name'] ?? '').toString(),
             });
           }
         }
       }
-    } catch (e) {
-      // Ignore errors, we still have static ones
-    }
-
-    final Map<String, int> counts = {};
-    for (final r in reciters) {
-      counts[r['id']!] = await _countDownloadedSurahs(r['id']!);
-    }
-
-    final isAr = TranslationService.isArabic;
-    reciters.sort((a, b) {
-      // Sort by Qira'ah first, then by reciter name — so the UI group
-      // headers render cleanly.
-      final quraaA = isAr ? a['quraaAr']! : a['quraaEn']!;
-      final quraaB = isAr ? b['quraaAr']! : b['quraaEn']!;
-      final cmp = quraaA.compareTo(quraaB);
-      if (cmp != 0) return cmp;
-      final nameA = isAr ? a['nameAr']! : a['nameEn']!;
-      final nameB = isAr ? b['nameAr']! : b['nameEn']!;
-      return nameA.compareTo(nameB);
-    });
-
-    if (mounted) {
+      if (!mounted || extra.isEmpty) return;
       setState(() {
-        _allReciters = reciters;
-        _counts = counts;
-        _loading = false;
+        _allReciters = [..._allReciters, ...extra];
+        _sortReciters(_allReciters);
       });
-    }
+    } catch (_) {}
   }
 
   @override
@@ -1219,7 +1217,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
             style: const TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 16,
-              color: Color(0xFFE5C158),
+              color: Color(0xFFD6BC87),
             ),
           ),
           const SizedBox(height: 4),
@@ -1242,7 +1240,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
               style: TextStyle(fontSize: 13, color: theme.textTheme.bodyLarge?.color),
               decoration: InputDecoration(
                 hintText: isAr ? "ابحث عن مقرئ..." : "Search reciters...",
-                prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFFE5C158)),
+                prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFFD6BC87)),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear, size: 16),
@@ -1253,7 +1251,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                 contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.2))),
                 enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: theme.dividerColor.withValues(alpha: 0.2))),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE5C158))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFD6BC87))),
               ),
               onChanged: (v) => setState(() => _searchQuery = v.trim().toLowerCase()),
             ),
@@ -1262,7 +1260,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
           if (_loading)
             const Padding(
               padding: EdgeInsets.all(24),
-              child: CircularProgressIndicator(color: Color(0xFFE5C158)),
+              child: CircularProgressIndicator(color: Color(0xFFD6BC87)),
             )
           else if (_searchQuery.isNotEmpty && _filteredReciters().isEmpty)
             Expanded(
@@ -1311,7 +1309,7 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13,
-                              color: Color(0xFFE5C158),
+                              color: Color(0xFFD6BC87),
                             ),
                           ),
                         ),
@@ -1319,12 +1317,12 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                         margin: const EdgeInsets.only(bottom: 10),
                     decoration: BoxDecoration(
                       color: isActive
-                          ? const Color(0xFFE5C158).withValues(alpha: 0.08)
+                          ? const Color(0xFFD6BC87).withValues(alpha: 0.08)
                           : theme.cardColor,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isActive
-                            ? const Color(0xFFE5C158).withValues(alpha: 0.5)
+                            ? const Color(0xFFD6BC87).withValues(alpha: 0.5)
                             : theme.dividerColor.withValues(alpha: 0.15),
                         width: isActive ? 1.5 : 1,
                       ),
@@ -1340,13 +1338,13 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                             radius: 18,
                             backgroundColor: isFull
                                 ? Colors.green.withValues(alpha: 0.15)
-                                : const Color(0xFFE5C158).withValues(alpha: 0.1),
+                                : const Color(0xFFD6BC87).withValues(alpha: 0.1),
                             child: Icon(
                               isFull ? Icons.check_circle : Icons.person,
                               size: 18,
                               color: isFull
                                   ? Colors.green
-                                  : const Color(0xFFE5C158),
+                                  : const Color(0xFFD6BC87),
                             ),
                           ),
                           title: Text(
@@ -1427,9 +1425,9 @@ class _ReciterPickerSheetState extends State<_ReciterPickerSheet> {
                                 value: progress,
                                 minHeight: 4,
                                 backgroundColor: const Color(
-                                  0xFFE5C158,
+                                  0xFFD6BC87,
                                 ).withValues(alpha: 0.15),
-                                color: const Color(0xFFE5C158),
+                                color: const Color(0xFFD6BC87),
                               ),
                             ),
                           ),

@@ -43,7 +43,11 @@
 					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
 					<key>UISceneStoryboardFile</key>
 					<string>Main</string>
-				</dict>
+				  <key>NSSpeechRecognitionUsageDescription</key>
+  <string>يستخدم التطبيق التعرف على الكلام لمقارنة تسميع الآيات القرآنية بالنص.</string>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>يستخدم التطبيق الميكروفون للاستماع إلى تسميعك للآيات التي تختارها.</string>
+</dict>
 			</array>
 		</dict>
 	</dict>

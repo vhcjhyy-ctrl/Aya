@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -254,108 +255,132 @@ class _AssistantScreenState extends State<AssistantScreen> {
     }
   }
 
+  Future<bool> _areCoreHadithBooksReady(DatabaseService database, String lang) async {
+    try {
+      final ready = await Future.wait(
+        _coreHadithBooks.map((id) => database.hadith.isHadithBookDownloaded(id, lang)),
+      );
+      return ready.every((value) => value);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  void _prepareHadithIndexInBackground(DatabaseService database, String lang) {
+    unawaited(() async {
+      try {
+        await _ensureHadithBooks(database, lang);
+        await _ensureHadithGradesLoaded();
+      } catch (_) {}
+    }());
+  }
+
   Future<void> _ask([String? suppliedQuestion]) async {
     final question = (suppliedQuestion ?? _controller.text).trim();
     if (question.isEmpty || _isSearching) return;
-
     _controller.clear();
     setState(() {
       _turns.add(_AssistantTurn(text: question, isUser: true));
       _isSearching = true;
       _status = TranslationService.isArabic
-          ? 'أبحث في المصادر الإسلامية المحلية...'
-          : 'Searching the local Islamic sources...';
+          ? 'أبحث في القرآن والفقه أولًا...'
+          : 'Searching Quran and fiqh sources...';
     });
     _scrollToBottom();
 
     try {
       final database = await DatabaseService.getInstance();
       final lang = TranslationService.isArabic ? 'ara' : 'eng';
-      await _ensureHadithGradesLoaded();
-      await _ensureHadithBooks(
-        database,
-        lang,
-        onProgress: (message) {
-          if (mounted) setState(() => _status = message);
-        },
-      );
+      final hadithReady = await _areCoreHadithBooksReady(database, lang);
+      if (!hadithReady) {
+        _prepareHadithIndexInBackground(database, lang);
+      } else {
+        await _ensureHadithGradesLoaded();
+      }
 
       final keywords = _keywords(question);
-      final searchTerms = keywords.isEmpty ? <String>[question] : keywords;
+      final terms = (keywords.isEmpty ? <String>[question] : keywords).take(5).toList();
       final fiqhMatches = _searchFiqhTopics(question, keywords);
       final ayahRows = <String, Map<String, dynamic>>{};
       final ayahScores = <String, int>{};
       final hadithRows = <String, Map<String, dynamic>>{};
       final hadithScores = <String, int>{};
 
-      for (final term in searchTerms) {
+      final ayahBatches = <List<Map<String, dynamic>>>[];
+      await Future.wait(terms.map((term) async {
         try {
-          final matches = await database.searchAyahs(term);
-          for (final row in matches.take(18)) {
-            final key = '${row['surah_number']}:${row['ayah_number']}';
-            ayahRows[key] = row;
-            ayahScores[key] = (ayahScores[key] ?? 0) + 1;
-          }
+          ayahBatches.add(await database.searchAyahs(term));
         } catch (_) {}
+      }));
+      for (final batch in ayahBatches) {
+        for (final row in batch.take(18)) {
+          final key = row['surah_number'].toString() + ':' + row['ayah_number'].toString();
+          ayahRows[key] = row;
+          ayahScores[key] = (ayahScores[key] ?? 0) + 1;
+        }
       }
 
-      for (final term in searchTerms) {
-        try {
-          final matches = await database.hadith.searchAllHadiths(lang, term, 14);
-          for (final row in matches) {
-            final key = '${row['book_id']}:${row['hadith_number']}:${row['id']}';
+      if (hadithReady) {
+        final batches = <List<Map<String, dynamic>>>[];
+        await Future.wait(terms.map((term) async {
+          try {
+            batches.add(await database.hadith.searchAllHadiths(lang, term, 14));
+          } catch (_) {}
+        }));
+        for (final batch in batches) {
+          for (final row in batch) {
+            final key = row['book_id'].toString() + ':' +
+                row['hadith_number'].toString() + ':' + row['id'].toString();
             hadithRows[key] = row;
             hadithScores[key] = (hadithScores[key] ?? 0) + 1;
           }
-        } catch (_) {}
+        }
       }
 
       final rankedAyahs = ayahRows.entries.toList()
         ..sort((a, b) => (ayahScores[b.key] ?? 0).compareTo(ayahScores[a.key] ?? 0));
       final rankedHadiths = hadithRows.entries.toList()
         ..sort((a, b) => (hadithScores[b.key] ?? 0).compareTo(hadithScores[a.key] ?? 0));
-
-      final ayahs = rankedAyahs.take(4).map((entry) => entry.value).toList();
-      final hadiths = rankedHadiths.take(4).map((entry) => entry.value).toList();
-
-      final hasAnyEvidence =
-          ayahs.isNotEmpty || hadiths.isNotEmpty || fiqhMatches.isNotEmpty;
-      final responseText = !hasAnyEvidence
+      final ayahs = rankedAyahs.take(4).map((e) => e.value).toList();
+      final hadiths = rankedHadiths.take(4).map((e) => e.value).toList();
+      final anyEvidence = ayahs.isNotEmpty || hadiths.isNotEmpty || fiqhMatches.isNotEmpty;
+      final responseText = !anyEvidence
           ? (TranslationService.isArabic
               ? 'لم أعثر على جواب مطابق في مكتبة الفقه أو نصوص القرآن والأحاديث المتاحة محليًا. جرّب صياغة السؤال بكلمات أوضح. لا أختلق حكمًا شرعيًا عند غياب الدليل.'
-              : 'No close answer was found in the local fiqh library, Quran, or hadith texts. Try clearer wording. I will not invent a religious ruling without a source.')
+              : 'No close answer was found in the local fiqh library, Quran, or hadith texts. Try clearer wording.')
           : (fiqhMatches.isNotEmpty
               ? (TranslationService.isArabic
                   ? 'وجدت مادة فقهية ذات صلة من مكتبة التطبيق، وأرفقت معها مواضع الأدلة المتاحة. راجع التنبيه بشأن اختلاف المسائل الفقهية.'
-                  : 'I found relevant material in the app’s fiqh library and included its available evidence references. Review the note about differences in fiqh rulings.')
+                  : 'I found relevant material in the app’s fiqh library and included its available evidence references.')
               : (TranslationService.isArabic
                   ? 'عُثر على نصوص ذات صلة بسؤالك. راجع الآيات والأحاديث ومراجعها أدناه؛ هذه نتائج بحث موثقة وليست فتوى مستقلة.'
-                  : 'Relevant source texts were found. Review the verses, narrations, and references below. These are retrieved sources, not an independent fatwa.'));
+                  : 'Relevant source texts were found. Review their references below; these are retrieved sources, not an independent fatwa.'));
+      final note = !hadithReady
+          ? (TranslationService.isArabic
+              ? '\n\nيجري تجهيز فهرس الأحاديث في الخلفية؛ لذلك ظهرت نتائج القرآن والفقه أولًا. أعد السؤال بعد اكتمال التجهيز لإظهار نتائج الحديث أيضًا.'
+              : '\n\nThe hadith index is being prepared in the background. Quran and fiqh results are shown first.')
+          : '';
 
       if (!mounted) return;
       setState(() {
-        _turns.add(
-          _AssistantTurn(
-            text: responseText,
-            ayahs: ayahs,
-            hadiths: hadiths,
-            fiqhMatches: fiqhMatches,
-          ),
-        );
+        _turns.add(_AssistantTurn(
+          text: responseText + note,
+          ayahs: ayahs,
+          hadiths: hadiths,
+          fiqhMatches: fiqhMatches,
+        ));
         _isSearching = false;
         _status = '';
       });
       _scrollToBottom();
-    } catch (error) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _turns.add(
-          _AssistantTurn(
-            text: TranslationService.isArabic
-                ? 'تعذّر إكمال البحث الآن. تأكد من توفر مساحة تخزين كافية ثم حاول مرة أخرى.'
-                : 'The search could not be completed. Check available storage and try again.',
-          ),
-        );
+        _turns.add(_AssistantTurn(
+          text: TranslationService.isArabic
+              ? 'تعذّر إكمال البحث الآن. تأكد من توفر مساحة تخزين كافية ثم حاول مرة أخرى.'
+              : 'The search could not be completed. Check available storage and try again.',
+        ));
         _isSearching = false;
         _status = '';
       });
@@ -464,7 +489,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isArabic = TranslationService.isArabic;
-    final gold = const Color(0xFFE5C158);
+    final gold = const Color(0xFFD6BC87);
 
     return Scaffold(
       appBar: AppBar(
@@ -704,7 +729,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     final isArabic = TranslationService.isArabic;
     final topic = match.topic;
     final title = topic.getTitle(isArabic);
-    final gold = const Color(0xFFE5C158);
+    final gold = const Color(0xFFD6BC87);
     final evidence = topic.evidences.take(3).toList();
 
     return Card(
@@ -839,7 +864,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
   Widget _sectionTitle(ThemeData theme, String text) {
     return Row(
       children: [
-        const Icon(Icons.menu_book, size: 17, color: Color(0xFFE5C158)),
+        const Icon(Icons.menu_book, size: 17, color: Color(0xFFD6BC87)),
         const SizedBox(width: 7),
         Text(
           text,
@@ -881,7 +906,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
                   ? 'سورة $surah — الآية $number'
                   : '$surah — Verse $number',
               style: const TextStyle(
-                color: Color(0xFFE5C158),
+                color: Color(0xFFD6BC87),
                 fontWeight: FontWeight.w700,
                 fontSize: 12,
               ),
@@ -901,7 +926,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     final text = hadith[lang]?.toString() ?? '';
     final book = _hadithBookName(hadith['book_id']);
     final number = hadith['hadith_number']?.toString() ?? '';
-    final gold = const Color(0xFFE5C158);
+    final gold = const Color(0xFFD6BC87);
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),

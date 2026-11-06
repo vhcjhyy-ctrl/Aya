@@ -34,26 +34,26 @@ ThemeData _buildM3LightTheme({ColorScheme? dynamicScheme}) {
       (dynamicScheme != null && dynamicScheme.brightness == Brightness.light)
           ? dynamicScheme.harmonized()
           : ColorScheme.fromSeed(
-              seedColor: AppColors.teal,
+              seedColor: const Color(0xFF2E695F),
               brightness: Brightness.light,
               primary: AppColors.teal,
               onPrimary: Colors.white,
               secondary: const Color(0xFFB45309), // Amber accent
               onSecondary: Colors.white,
-              surface: Colors.white,
-              onSurface: const Color(0xFF0F172A),
-              surfaceContainerLowest: const Color(0xFFF8FAFC),
-              surfaceContainerHigh: Colors.white,
-              surfaceContainerHighest: const Color(0xFFF1F5F9),
-              outline: const Color(0xFFCBD5E1),
-              outlineVariant: const Color(0xFFE2E8F0),
+              surface: const Color(0xFFFFFEFA),
+              onSurface: const Color(0xFF293A34),
+              surfaceContainerLowest: const Color(0xFFF6F5EF),
+              surfaceContainerHigh: const Color(0xFFFFFEFA),
+              surfaceContainerHighest: const Color(0xFFECEEE7),
+              outline: const Color(0xFFD0D9D1),
+              outlineVariant: const Color(0xFFE2E7E0),
             );
 
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: const Color(0xFFF8FAFC),
+    scaffoldBackgroundColor: const Color(0xFFF6F5EF),
     primaryColor: colorScheme.primary,
     cardColor: Colors.white,
     canvasColor: Colors.white,
@@ -192,16 +192,16 @@ ThemeData _buildM3DarkTheme({ColorScheme? dynamicScheme}) {
   final colorScheme = (dynamicScheme != null)
       ? dynamicScheme.harmonized()
       : ColorScheme.fromSeed(
-          seedColor: AppColors.gold,
+          seedColor: const Color(0xFF254C44),
           brightness: Brightness.dark,
           primary: AppColors.gold,
           onPrimary: Colors.black,
-          secondary: AppColors.teal,
+          secondary: AppColors.green,
           onSecondary: Colors.white,
-          surface: const Color(0xFF101622),
-          onSurface: const Color(0xFFF8FAFC),
-          surfaceContainerHighest: const Color(0xFF1E293B),
-          outline: const Color(0xFF2A3A55),
+          surface: const Color(0xFF17231F),
+          onSurface: const Color(0xFFF0F2EC),
+          surfaceContainerHighest: const Color(0xFF26342F),
+          outline: const Color(0xFF43544C),
         );
 
   return ThemeData(

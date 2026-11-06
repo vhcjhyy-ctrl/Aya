@@ -33,23 +33,40 @@ class RecitersCacheService {
   static Future<List<Map<String, dynamic>>> getRecitersForRiwayah(
     int riwayahId,
   ) async {
-    final all = await _ensureLoaded();
-    final seen = <String>{};
-    final filtered = <Map<String, dynamic>>[];
-    for (final r in all) {
-      final name = r['name'] as String;
-      if (!seen.add(name)) continue; // same reciter from a different riwayah
-      final moshafs = (r['moshaf'] as List)
-          .where((m) => (m['rewaya_id'] as int) == riwayahId)
-          .toList();
-      if (moshafs.isNotEmpty) {
-        filtered.add({
-          'name': name,
-          'moshaf': moshafs,
-        });
+    return filterRecitersForRiwayah(await _ensureLoaded(), riwayahId);
+  }
+
+  /// Filter a riwayah before deduplicating names so another API row
+  /// for the same reciter cannot hide a matching recording.
+  @visibleForTesting
+  static List<Map<String, dynamic>> filterRecitersForRiwayah(
+    Iterable<Map<String, dynamic>> all,
+    int riwayahId,
+  ) {
+    final grouped = <String, Map<String, dynamic>>{};
+    for (final reciter in all) {
+      final name = (reciter['name'] ?? '').toString().trim();
+      if (name.isEmpty) continue;
+      final raw = reciter['moshaf'] as List? ?? const [];
+      final matching = raw.where((entry) {
+        final m = entry as Map;
+        return int.tryParse(m['rewaya_id']?.toString() ?? '') == riwayahId;
+      }).map((entry) => Map<String, dynamic>.from(entry as Map)).toList();
+      if (matching.isEmpty) continue;
+      final target = grouped.putIfAbsent(
+        name,
+        () => {'name': name, 'moshaf': <Map<String, dynamic>>[]},
+      );
+      final current = target['moshaf'] as List<Map<String, dynamic>>;
+      final servers = current.map((m) => m['server']?.toString() ?? '').toSet();
+      for (final m in matching) {
+        final server = m['server']?.toString() ?? '';
+        if (server.isNotEmpty && servers.add(server)) current.add(m);
       }
     }
-    return filtered;
+    final result = grouped.values.toList()
+      ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+    return result;
   }
 
   /// Return all reciters across all riwayat (for the download picker).
@@ -100,7 +117,7 @@ class RecitersCacheService {
     try {
       // 1. Try single comprehensive endpoint (fetches all reciters and all moshafs instantly)
       final uri = Uri.parse('https://mp3quran.net/api/v3/reciters?language=$lang');
-      final res = await client.get(uri);
+      final res = await client.get(uri).timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         final data = jsonDecode(utf8.decode(res.bodyBytes)) as Map<String, dynamic>;
         final list = (data['reciters'] as List?) ?? [];
@@ -114,7 +131,7 @@ class RecitersCacheService {
       final riwayatUri = Uri.parse(
         'https://mp3quran.net/api/v3/riwayat?language=$lang',
       );
-      final riwayatRes = await client.get(riwayatUri);
+      final riwayatRes = await client.get(riwayatUri).timeout(const Duration(seconds: 10));
       if (riwayatRes.statusCode == 200) {
         final riwayatData = jsonDecode(utf8.decode(riwayatRes.bodyBytes))
             as Map<String, dynamic>;
@@ -186,7 +203,7 @@ class RecitersCacheService {
       final decoded = jsonDecode(content) as Map<String, dynamic>;
       // Invalidate cache after 7 days or if it's from before the dedup fix
       final cacheVersion = decoded['_v'] as int? ?? 0;
-      if (cacheVersion < 2) return null;
+      if (cacheVersion < 3) return null;
       final cachedAt = decoded['_cached_at'] as int? ?? 0;
       if (DateTime.now().millisecondsSinceEpoch - cachedAt >
           const Duration(days: 7).inMilliseconds) {
@@ -203,7 +220,7 @@ class RecitersCacheService {
     try {
       final file = await _cacheFile();
       final wrapper = {
-        '_v': 2,
+        '_v': 3,
         '_cached_at': DateTime.now().millisecondsSinceEpoch,
         'reciters': reciters,
       };

@@ -20,6 +20,7 @@ import 'prophets_stories_screen.dart';
 import 'sirah_screen.dart';
 import 'fiqh/fiqh_screen.dart';
 import 'assistant_screen.dart';
+import 'sheikh_ahmed_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final StorageService storage;
@@ -637,7 +638,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _pill(ThemeData theme, String label, String time, IconData icon) {
     return Column(
       children: [
-        Icon(icon, size: 14, color: const Color(0xFFE5C158)),
+        Icon(icon, size: 14, color: const Color(0xFFD6BC87)),
         const SizedBox(height: 4),
         Text(
           label,
@@ -718,7 +719,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     child: Padding(
                       padding: EdgeInsets.all(24.0),
                       child: CircularProgressIndicator(
-                        color: Color(0xFFE5C158),
+                        color: Color(0xFFD6BC87),
                       ),
                     ),
                   )
@@ -750,7 +751,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         const SizedBox(height: 12),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFE5C158),
+                            backgroundColor: const Color(0xFFD6BC87),
                             foregroundColor: Colors.black,
                           ),
                           onPressed: _loadPrayerTimes,
@@ -770,7 +771,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     decoration: BoxDecoration(
                       color: theme.cardColor,
                       border: Border.all(
-                        color: const Color(0xFFE5C158).withValues(alpha: 0.15),
+                        color: const Color(0xFFD6BC87).withValues(alpha: 0.15),
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
@@ -819,7 +820,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                         Text(
                           '${_pad(_nextPrayerCountdown.inHours)}:${_pad(_nextPrayerCountdown.inMinutes.remainder(60))}:${_pad(_nextPrayerCountdown.inSeconds.remainder(60))}',
                           style: const TextStyle(
-                            color: Color(0xFFE5C158),
+                            color: Color(0xFFD6BC87),
                             fontSize: 42,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1,
@@ -1022,6 +1023,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                           context,
                           MaterialPageRoute(
                             builder: (context) => const AssistantScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.record_voice_over_rounded,
+                      title: TranslationService.isArabic
+                          ? 'الشيخ أحمد محمد'
+                          : 'Sheikh Ahmed',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                SheikhAhmedScreen(storage: widget.storage),
                           ),
                         );
                       },
