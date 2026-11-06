@@ -22,8 +22,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
   final ScrollController _scrollController = ScrollController();
   final List<_AssistantTurn> _turns = [
     const _AssistantTurn(
-      text:
-          'مرحبًا بك في سؤالك. اكتب كلمة أو عبارة عن مسألة إسلامية، وسأبحث لك في نصوص القرآن والأحاديث المتاحة داخل التطبيق مع إظهار المراجع.',
+      text: TranslationService.isArabic
+          ? 'مرحبًا بك في سؤالك. اكتب مسألتك، وسأبحث في القرآن والأحاديث ومكتبة الفقه داخل التطبيق، وأعرض لك النصوص والمراجع المتاحة.'
+          : 'Welcome to Ask. Enter your question and I will search the Quran, Hadith, and the app’s fiqh library, then show the available texts and references.',
     ),
   ];
 
@@ -455,8 +456,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      isArabic ? 'الصبر' : 'Patience',
-                      isArabic ? 'بر الوالدين' : 'Parents',
+                      isArabic ? 'الوضوء' : 'Ablution',
+                      isArabic ? 'الصلاة' : 'Prayer',
                       isArabic ? 'الزكاة' : 'Zakat',
                       isArabic ? 'الصيام' : 'Fasting',
                     ].map((label) {
