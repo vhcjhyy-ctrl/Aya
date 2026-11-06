@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aya/services/quran_recitation_matcher.dart';
+import 'package:aya_app/services/quran_recitation_matcher.dart';
 
 void main() {
   group('QuranRecitationMatcher', () {
