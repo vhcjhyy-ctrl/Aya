@@ -4,7 +4,7 @@ This branch is a personal development edition based on the upstream [Aya Islamic
 
 ### Additions in this branch
 
-- Local Arabic voice assistant in the Sheikh Ahmed memorization screen. It downloads a small GGUF model once and runs on-device; no API key or hosted inference is required.
+- Local Arabic voice assistant in the Sheikh Ahmed memorization screen. It downloads a pinned, SHA-256-verified GGUF model once (about 528 MB) and runs on-device; no API key or hosted inference is required.
 - The optional local LLM engine requires Android 8.0+ and ARM64. The speech-recognition provider remains device-dependent.
 
 - Qalam Muslim branding, splash screen, and Android launcher artwork.

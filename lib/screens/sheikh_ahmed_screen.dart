@@ -277,7 +277,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     });
     try {
       if (!await _localAssistant.isModelDownloaded()) {
-        setState(() => _assistantModelStatus = 'تنزيل النموذج لأول مرة — نحو 533 ميجابايت');
+        setState(() => _assistantModelStatus = 'تنزيل النموذج لأول مرة — نحو 528 ميجابايت');
         await _localAssistant.downloadModel(
           onProgress: (progress) {
             if (!mounted) return;

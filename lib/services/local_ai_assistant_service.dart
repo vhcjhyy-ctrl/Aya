@@ -34,9 +34,23 @@ class LocalAiAssistantService {
   }
 
   Future<bool> isModelDownloaded() async {
-    final file = File(await _modelPath());
-    if (!await file.exists()) return false;
-    return await file.length() == expectedModelBytes;
+    final path = await _modelPath();
+    final file = File(path);
+    if (!await file.exists() || await file.length() != expectedModelBytes) {
+      return false;
+    }
+
+    // Cache successful verification to avoid hashing 528 MB on every app open.
+    final marker = File('$path.sha256');
+    if (await marker.exists() &&
+        (await marker.readAsString()).trim() == expectedModelSha256) {
+      return true;
+    }
+
+    final digest = await sha256.bind(file.openRead()).first;
+    if (digest.toString() != expectedModelSha256) return false;
+    await marker.writeAsString(expectedModelSha256, flush: true);
+    return true;
   }
 
   Future<void> cancelDownload() async {
@@ -122,6 +136,7 @@ class LocalAiAssistantService {
 
       if (await target.exists()) await target.delete();
       await partial.rename(path);
+      await File('$path.sha256').writeAsString(expectedModelSha256, flush: true);
       onProgress(1);
       return path;
     } catch (_) {
