@@ -33,6 +33,8 @@ class _AssistantScreenState extends State<AssistantScreen> {
   String _status = '';
   static Future<void>? _arabicHadithSeed;
   static Future<void>? _englishHadithSeed;
+  static Future<void>? _hadithGradesLoad;
+  static Map<String, List<String?>>? _hadithGrades;
 
   static const List<String> _coreHadithBooks = [
     'bukhari',
@@ -189,6 +191,28 @@ class _AssistantScreenState extends State<AssistantScreen> {
     return matches.take(3).toList();
   }
 
+  Future<void> _ensureHadithGradesLoaded() async {
+    _hadithGradesLoad ??= () async {
+      try {
+        final jsonString = await rootBundle.loadString(
+          'assets/hadith/grades.json',
+        );
+        final decoded = jsonDecode(jsonString) as Map<String, dynamic>;
+        _hadithGrades = decoded.map(
+          (bookId, values) => MapEntry(
+            bookId,
+            (values as List<dynamic>)
+                .map((value) => value?.toString())
+                .toList(),
+          ),
+        );
+      } catch (_) {
+        _hadithGrades = {};
+      }
+    }();
+    await _hadithGradesLoad;
+  }
+
   Future<void> _ensureHadithBooks(
     DatabaseService database,
     String lang, {
@@ -247,6 +271,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
     try {
       final database = await DatabaseService.getInstance();
       final lang = TranslationService.isArabic ? 'ara' : 'eng';
+      await _ensureHadithGradesLoaded();
       await _ensureHadithBooks(
         database,
         lang,
@@ -372,6 +397,20 @@ class _AssistantScreenState extends State<AssistantScreen> {
         : (_bookNamesEnglish[bookId] ?? bookId);
   }
 
+  String _localizeGrade(String grade) {
+    if (!TranslationService.isArabic) return grade;
+    return grade
+        .replaceAll('Hasan Sahih', 'حسن صحيح')
+        .replaceAll('Sahih', 'صحيح')
+        .replaceAll('Hasan', 'حسن')
+        .replaceAll("Da'if", 'ضعيف')
+        .replaceAll('Shadh', 'شاذ')
+        .replaceAll('Munkar', 'منكر')
+        .replaceAll('Mawdu', 'موضوع')
+        .replaceAll(' (Darussalam)', ' (دار السلام)')
+        .replaceAll(' (Al-Albani)', ' (الألباني)');
+  }
+
   String _hadithGrade(Map<String, dynamic> hadith) {
     final rawGrades = hadith['grades'];
     List<dynamic> grades = [];
@@ -392,7 +431,9 @@ class _AssistantScreenState extends State<AssistantScreen> {
         .toSet()
         .toList();
 
-    if (labels.isNotEmpty) return labels.take(2).join('، ');
+    if (labels.isNotEmpty) {
+      return labels.take(2).map(_localizeGrade).join('، ');
+    }
 
     final bookId = hadith['book_id']
             ?.toString()
@@ -400,6 +441,18 @@ class _AssistantScreenState extends State<AssistantScreen> {
         '';
     if (bookId == 'bukhari' || bookId == 'muslim') {
       return TranslationService.isArabic ? 'صحيح' : 'Sahih';
+    }
+
+    final rawNumber = hadith['hadith_number'];
+    final number = rawNumber is int
+        ? rawNumber
+        : int.tryParse(rawNumber?.toString() ?? '') ?? 0;
+    final bookGrades = _hadithGrades?[bookId];
+    if (number > 0 && bookGrades != null && number <= bookGrades.length) {
+      final grade = bookGrades[number - 1];
+      if (grade != null && grade.trim().isNotEmpty) {
+        return _localizeGrade(grade.trim());
+      }
     }
 
     return TranslationService.isArabic
