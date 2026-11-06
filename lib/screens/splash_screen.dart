@@ -156,10 +156,21 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ],
                     ),
-                    child: CustomPaint(
-                      painter: IslamicLogoPainter(
-                        animationValue: _controller.value,
-                        color: const Color(0xFFE5C158),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(36),
+                      child: Image.asset(
+                        'assets/icon.png',
+                        width: 180,
+                        height: 180,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return CustomPaint(
+                            painter: IslamicLogoPainter(
+                              animationValue: _controller.value,
+                              color: const Color(0xFFE5C158),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ),
