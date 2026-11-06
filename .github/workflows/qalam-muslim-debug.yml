@@ -87,41 +87,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
           script: |
-            set -eu
-            mkdir -p dist
-            adb wait-for-device
-            adb install -r dist/qalam-muslim-x86_64-release.apk
-            adb shell am force-stop com.ahmed.qalammuslim
-            adb shell am start -n com.ahmed.qalammuslim/com.quran.aya.MainActivity > dist/launch-result.txt 2>&1 || true
-            sleep 10
-            PID=""
-            for attempt in $(seq 1 15); do
-              PID="$(adb shell pidof com.ahmed.qalammuslim 2>/dev/null | tr -d '\\r' || true)"
-              if [ -n "$PID" ]; then
-                break
-              fi
-              sleep 2
-            done
-            if [ -z "$PID" ]; then
-              adb shell dumpsys activity activities > dist/activities-after-launch.txt || true
-              adb logcat -d -v time -t 5000 > dist/android-launch-log.txt || true
-              echo "Qalam Muslim process did not stay alive after launch."
-              exit 1
-            fi
-            echo "$PID" | tee dist/process-id.txt
-            sleep 15
-            adb shell dumpsys activity activities > dist/activities-after-launch.txt
-            adb exec-out screencap -p > dist/launch-screen.png
-            adb logcat -d -v time -t 5000 > dist/android-launch-log.txt
-            if ! grep -q "com.quran.aya.MainActivity" dist/activities-after-launch.txt; then
-              echo "Qalam Muslim MainActivity is not visible in the activity stack."
-              exit 1
-            fi
-            if grep -E "FATAL EXCEPTION|Process: com.ahmed.qalammuslim" dist/android-launch-log.txt; then
-              echo "A fatal application exception was recorded."
-              exit 1
-            fi
-            echo "PASS: application installed, launched, and remained alive on Android 11."
+            bash .github/scripts/verify_android_launch.sh
 
       - name: Upload Android launch diagnostics
         if: always()
