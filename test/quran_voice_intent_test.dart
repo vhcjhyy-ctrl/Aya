@@ -39,6 +39,14 @@ void main() {
         QuranVoiceCommand.pauseRecitation,
       );
       expect(
+        QuranVoiceIntent.parseCommand('وقف التسميع'),
+        QuranVoiceCommand.pauseRecitation,
+      );
+      expect(
+        QuranVoiceIntent.parseCommand('أوقف التسميع'),
+        QuranVoiceCommand.pauseRecitation,
+      );
+      expect(
         QuranVoiceIntent.parseCommand('اقفل المساعد'),
         QuranVoiceCommand.stop,
       );
@@ -60,6 +68,12 @@ void main() {
       expect(
         QuranVoiceIntent.stripTrailingPauseCommand('اقف'),
         isEmpty,
+      );
+      expect(
+        QuranVoiceIntent.stripTrailingPauseCommand(
+          'الحمد لله رب العالمين وقف التسميع',
+        ),
+        'الحمد لله رب العالمين',
       );
     });
 

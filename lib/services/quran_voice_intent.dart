@@ -18,6 +18,14 @@ enum QuranVoiceCommand {
 /// Arabic voice-intent helpers. Surah names are resolved against the app's
 /// bundled Quran catalogue; the language model is not asked to invent a match.
 class QuranVoiceIntent {
+  static const Set<String> _pausePhrases = {
+    'وقف التسميع',
+    'اوقف التسميع',
+    'توقف عن التسميع',
+    'وقف التلاوه',
+    'اوقف التلاوه',
+  };
+
   static const Set<String> _pauseCommands = {
     'قف',
     'وقف',
@@ -68,8 +76,20 @@ class QuranVoiceIntent {
   static String stripTrailingPauseCommand(String spokenText) {
     final trimmed = spokenText.trim();
     if (trimmed.isEmpty) return '';
-    final words = trimmed.split(RegExp(r'\\s+'));
-    if (words.isNotEmpty && _pauseCommands.contains(normalize(words.last))) {
+    final words = trimmed.split(RegExp(r'\s+'));
+    if (words.isEmpty) return '';
+
+    final normalizedPhrase = normalize(trimmed);
+    for (final pausePhrase in _pausePhrases) {
+      final normalizedPausePhrase = normalize(pausePhrase);
+      if (normalizedPhrase == normalizedPausePhrase) return '';
+      if (normalizedPhrase.endsWith(' ' + normalizedPausePhrase)) {
+        final count = normalizedPausePhrase.split(' ').length;
+        return words.take(words.length - count).join(' ').trim();
+      }
+    }
+
+    if (_pauseCommands.contains(normalize(words.last))) {
       words.removeLast();
     }
     return words.join(' ').trim();
@@ -88,7 +108,11 @@ class QuranVoiceIntent {
       return QuranVoiceCommand.stop;
     }
     if (_pauseCommands.contains(phrase) ||
-        _pauseCommands.any((command) => phrase.endsWith(' ' + command))) {
+        _pauseCommands.any((command) => phrase.endsWith(' ' + command)) ||
+        _pausePhrases.any(
+          (pausePhrase) => phrase == pausePhrase ||
+              phrase.endsWith(' ' + pausePhrase),
+        )) {
       return QuranVoiceCommand.pauseRecitation;
     }
     if (words.any(const {'التالي', 'كمل', 'اكمل', 'تابع'}.contains) ||
