@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../widgets/islamic_logo_painter.dart';
 import '../services/storage_service.dart';
 import '../services/translation_service.dart';
 import 'welcome_screen.dart';
