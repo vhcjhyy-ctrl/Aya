@@ -42,12 +42,12 @@ jobs:
         run: flutter analyze --no-pub
 
       - name: Build optimized Android release APKs
-        run: flutter build apk --flavor fdroid --release --split-per-abi
+        run: flutter build apk --flavor fdroid --release --target-platform android-arm64
 
       - name: Upload APK files
         uses: actions/upload-artifact@v6
         with:
-          name: qalam-muslim-release-apks
+          name: qalam-muslim-arm64-release-apk
           path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
           retention-days: 14
