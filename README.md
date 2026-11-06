@@ -8,13 +8,13 @@ This branch is a personal development edition based on the upstream [Aya Islamic
 - A separate Android application ID: `com.ahmed.qalammuslim`.
 - A new `سؤالك` screen that searches the bundled Quran, six core Hadith collections, and the in-app fiqh FAQ library. Results display source references and available hadith grading.
 - The assistant is source-grounded retrieval, not free-form AI generation or an independent fatwa service. It refuses to invent a ruling when local sources return no match.
-- A dedicated GitHub Actions workflow builds optimized Android Release APKs per ABI for the `fdroid` flavor and uploads them as a workflow artifact.
+- A dedicated GitHub Actions workflow builds one optimized ARM64 Android Release APK for the `fdroid` flavor and uploads it as a workflow artifact.
 
 ### Build this branch
 
 ```bash
 flutter pub get
-flutter build apk --flavor fdroid --release --split-per-abi
+flutter build apk --flavor fdroid --release --target-platform android-arm64
 ```
 
 The Android package ID is intentionally different from the upstream Aya app so both apps can be installed side by side.
