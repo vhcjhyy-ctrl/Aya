@@ -81,7 +81,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-load -no-snapshot-save
           script: |
-            set -euo pipefail
+            set -eu
             mkdir -p dist
             adb wait-for-device
             adb install -r dist/qalam-muslim-x86_64-release.apk
@@ -89,13 +89,21 @@ jobs:
             LAUNCH_OUTPUT="$(adb shell am start -W -n com.ahmed.qalammuslim/com.quran.aya.MainActivity 2>&1)"
             echo "$LAUNCH_OUTPUT" | tee dist/launch-result.txt
             echo "$LAUNCH_OUTPUT" | grep -q "Status: ok"
-            for attempt in $(seq 1 20); do
-              if adb shell pidof com.ahmed.qalammuslim >/dev/null 2>&1; then
+            PID=""
+            for attempt in $(seq 1 30); do
+              PID="$(adb shell pidof com.ahmed.qalammuslim 2>/dev/null | tr -d '\\r' || true)"
+              if [ -n "$PID" ]; then
                 break
               fi
               sleep 2
             done
-            adb shell pidof com.ahmed.qalammuslim | tee dist/process-id.txt
+            if [ -z "$PID" ]; then
+              adb shell dumpsys activity activities > dist/activities-after-launch.txt || true
+              adb logcat -d -v time -t 5000 > dist/android-launch-log.txt || true
+              echo "Qalam Muslim process did not stay alive after launch."
+              exit 1
+            fi
+            echo "$PID" | tee dist/process-id.txt
             sleep 15
             adb shell dumpsys activity activities > dist/activities-after-launch.txt
             adb exec-out screencap -p > dist/launch-screen.png
