@@ -20,7 +20,6 @@ void main() {
       isTrue,
     );
   });
-}
 
   test('legacy reciter preferences resolve to supported audio edition IDs', () {
     final sudais = ApiService.buildAyahAudioUrl(
@@ -44,3 +43,4 @@ void main() {
     expect(abdulbasit, contains('/ar.abdulbasit/262.mp3'));
     expect(shuraim, contains('/ar.shuraim/2.mp3'));
   });
+}
