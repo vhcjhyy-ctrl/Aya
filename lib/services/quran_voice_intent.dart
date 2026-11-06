@@ -86,6 +86,13 @@ class QuranVoiceIntent {
         phrase.contains('ابدا التسميع')) {
       return QuranVoiceCommand.start;
     }
+    if (words.any(const {'راجعها', 'راجع', 'مراجعه', 'صعبه'}.contains) ||
+        phrase.contains('احتاج مراجعه') ||
+        phrase.contains('تحتاج مراجعه') ||
+        phrase.contains('خليها مراجعه') ||
+        phrase.contains('سجلها للمراجعه')) {
+      return QuranVoiceCommand.needsReview;
+    }
     if (words.any(const {
       'احفظها',
       'احفظ',
@@ -94,16 +101,12 @@ class QuranVoiceIntent {
       'سجل',
       'اتقنتها',
       'اتقنت',
+      'اتممت',
     }.contains) ||
         phrase.contains('سجلها في الحفظ') ||
-        phrase.contains('اضفها للمحفوظ')) {
+        phrase.contains('اضفها للمحفوظ') ||
+        phrase.contains('اتممت المراجعه')) {
       return QuranVoiceCommand.markMemorized;
-    }
-    if (words.any(const {'راجعها', 'راجع', 'مراجعه', 'صعبه'}.contains) ||
-        phrase.contains('احتاج مراجعه') ||
-        phrase.contains('تحتاج مراجعه') ||
-        phrase.contains('خليها مراجعه')) {
-      return QuranVoiceCommand.needsReview;
     }
     return QuranVoiceCommand.unknown;
   }

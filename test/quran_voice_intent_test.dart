@@ -74,6 +74,14 @@ void main() {
         QuranVoiceIntent.parseCommand('خليها مراجعة'),
         QuranVoiceCommand.needsReview,
       );
+      expect(
+        QuranVoiceIntent.parseCommand('سجلها للمراجعة'),
+        QuranVoiceCommand.needsReview,
+      );
+      expect(
+        QuranVoiceIntent.parseCommand('أتممت المراجعة'),
+        QuranVoiceCommand.markMemorized,
+      );
     });
 
     test('does not invent an unknown surah', () {

@@ -1125,10 +1125,17 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   Future<void> _memorized() async {
     if (_ayah == null) return;
-    final oldStage = _record(_recordKey)['stage'] as int? ?? -1;
+    final currentRecord = _record(_recordKey);
+    final oldStage = currentRecord['stage'] as int? ?? -1;
     const days = [1, 3, 7, 14, 30];
-    final stage = (oldStage + 1).clamp(0, days.length - 1).toInt();
     final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day).millisecondsSinceEpoch;
+    final lastReviewedAt = currentRecord['lastReviewedAt'] as int? ?? 0;
+    final alreadyReviewedToday =
+        lastReviewedAt >= todayStart && lastReviewedAt <= now.millisecondsSinceEpoch;
+    final stage = (alreadyReviewedToday ? oldStage : oldStage + 1)
+        .clamp(0, days.length - 1)
+        .toInt();
     _records[_recordKey] = {
       ..._record(_recordKey),
       'status': 'memorized',
@@ -1178,9 +1185,14 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   int get _reviewCount => _records.values.where((v) => v is Map && v['status'] == 'review').length;
 
   int get _reviewedToday {
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day).millisecondsSinceEpoch;
-    return _records.values.where((v) => v is Map && (v['lastReviewedAt'] as int? ?? 0) >= start).length;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final start = DateTime.fromMillisecondsSinceEpoch(now);
+    final dayStart = DateTime(start.year, start.month, start.day).millisecondsSinceEpoch;
+    return _records.values.where((value) {
+      if (value is! Map) return false;
+      final reviewedAt = value['lastReviewedAt'] as int? ?? 0;
+      return reviewedAt >= dayStart && reviewedAt <= now;
+    }).length;
   }
 
   Future<void> _changeTarget(int step) async {
