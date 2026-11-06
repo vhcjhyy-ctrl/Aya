@@ -16,6 +16,7 @@ permissions:
 jobs:
   build-and-launch-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Check out source
         uses: actions/checkout@v6
@@ -47,17 +48,28 @@ jobs:
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-arm64-release.apk
 
-      - name: Build x86_64 release for emulator
-        run: |
-          flutter build apk --flavor fdroid --release --target-platform android-x64
-          cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
-
-      - name: Verify APK package metadata and launcher icon
+      - name: Verify ARM64 APK metadata and launcher icon
         run: |
           BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           "$BUILD_TOOLS/aapt" dump badging dist/qalam-muslim-arm64-release.apk | tee dist/apk-badging.txt
           grep -q "package: name='com.ahmed.qalammuslim'" dist/apk-badging.txt
           grep -q "application-icon" dist/apk-badging.txt
+          test -s dist/qalam-muslim-arm64-release.apk
+
+      - name: Upload ARM64 release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-arm64-release
+          path: |
+            dist/qalam-muslim-arm64-release.apk
+            dist/apk-badging.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build x86_64 release for emulator
+        run: |
+          flutter build apk --flavor fdroid --release --target-platform android-x64
+          cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
 
       - name: Install and launch on Android 11 emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -67,29 +79,44 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot-load -no-snapshot-save
           script: |
-            set -e
+            set -euo pipefail
+            mkdir -p dist
+            adb wait-for-device
             adb install -r dist/qalam-muslim-x86_64-release.apk
             adb shell am force-stop com.ahmed.qalammuslim
-            adb shell am start -n com.ahmed.qalammuslim/com.quran.aya.MainActivity
-            sleep 20
-            if ! adb shell pidof com.ahmed.qalammuslim >/dev/null; then
-              adb logcat -d -v time > dist/launch-failure.log
-              echo "Qalam Muslim process exited after launch."
+            LAUNCH_OUTPUT="$(adb shell am start -W -n com.ahmed.qalammuslim/com.quran.aya.MainActivity 2>&1)"
+            echo "$LAUNCH_OUTPUT" | tee dist/launch-result.txt
+            echo "$LAUNCH_OUTPUT" | grep -q "Status: ok"
+            for attempt in $(seq 1 20); do
+              if adb shell pidof com.ahmed.qalammuslim >/dev/null 2>&1; then
+                break
+              fi
+              sleep 2
+            done
+            adb shell pidof com.ahmed.qalammuslim | tee dist/process-id.txt
+            sleep 15
+            adb shell dumpsys activity activities > dist/activities-after-launch.txt
+            adb exec-out screencap -p > dist/launch-screen.png
+            adb logcat -d -v time -t 5000 > dist/android-launch-log.txt
+            grep -q "com.ahmed.qalammuslim" dist/activities-after-launch.txt
+            if grep -E "FATAL EXCEPTION|Process: com.ahmed.qalammuslim" dist/android-launch-log.txt; then
+              echo "A fatal application exception was recorded."
               exit 1
             fi
-            adb shell dumpsys activity activities > dist/activities-after-launch.txt
-            adb logcat -d -v time -s AndroidRuntime FlutterActivity Flutter > dist/launch-success.log
-            echo "PASS: Qalam Muslim stayed running after a cold launch on Android 11."
+            echo "PASS: application installed, launched, and remained alive on Android 11."
 
-      - name: Upload verified ARM64 APK and launch diagnostics
+      - name: Upload Android launch diagnostics
+        if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: qalam-muslim-verified-arm64-release
+          name: qalam-muslim-android-launch-diagnostics
           path: |
-            dist/qalam-muslim-arm64-release.apk
-            dist/apk-badging.txt
+            dist/launch-result.txt
+            dist/process-id.txt
             dist/activities-after-launch.txt
-            dist/launch-success.log
-          if-no-files-found: error
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
           retention-days: 14
