@@ -1,6 +1,25 @@
 {
   "versions": [
     {
+      "version": "1.6.0",
+      "date": "2026-11-06",
+      "title": "Sheikh Ahmed Voice Hifz, Reciter Selection & Performance Refresh",
+      "changes": {
+        "en": [
+          "Sheikh Ahmed Voice Hifz — Select from 18 Quran reciters, hide the ayah during recitation, and hear spoken feedback after the word-match comparison",
+          "Random Hifz Review — Start a blind recall quiz from previously memorized ayahs",
+          "Faster Islamic Assistant — Reduced local search fan-out and moved independent preparation work off the response critical path",
+          "Calmer Visual Palette — Refreshed light and dark themes with softer green, ivory, and muted bronze tones"
+        ],
+        "ar": [
+          "مساعد الشيخ أحمد محمد — اختيار من ١٨ قارئًا، وإخفاء الآية أثناء التسميع، وسماع التقييم اللفظي صوتيًا",
+          "اختبار حفظ عشوائي — اختبار استرجاع آية من المحفوظ دون إظهار النص",
+          "تسريع المساعد الإسلامي — تقليل عمليات البحث المتوازية ونقل الأعمال المستقلة خارج مسار الاستجابة",
+          "ألوان أكثر راحة — تحديث الوضعين الفاتح والداكن بدرجات خضراء هادئة وعاجية ونحاسية مطفأة"
+        ]
+      }
+    },
+    {
       "version": "1.4.1",
       "date": "2026-10-30",
       "title": "Prayer & Hijri Calendar Redesign, Audio Playback & Qira'at Filtering",
