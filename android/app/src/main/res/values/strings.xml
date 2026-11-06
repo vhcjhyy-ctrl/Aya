@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Aya</string>
-    <string name="widget_app_subtitle">Aya</string>
+    <string name="app_name">Qalam Muslim</string>
+    <string name="widget_app_subtitle">Qalam Muslim</string>
 
-    <string name="widget_prayer_times_label">Aya - Prayer Times</string>
+    <string name="widget_prayer_times_label">Qalam Muslim - Prayer Times</string>
     <string name="widget_prayer_times_title">Prayer Times</string>
     <string name="widget_prayer_times_description">Displays today\'s prayer times at your location.</string>
     
