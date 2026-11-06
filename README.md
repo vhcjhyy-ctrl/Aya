@@ -4,6 +4,9 @@ This branch is a personal development edition based on the upstream [Aya Islamic
 
 ### Additions in this branch
 
+- Local Arabic voice assistant in the Sheikh Ahmed memorization screen. It downloads a small GGUF model once and runs on-device; no API key or hosted inference is required.
+- The optional local LLM engine requires Android 8.0+ and ARM64. The speech-recognition provider remains device-dependent.
+
 - Qalam Muslim branding, splash screen, and Android launcher artwork.
 - A separate Android application ID: `com.ahmed.qalammuslim`.
 - A new `سؤالك` screen that searches the bundled Quran, six core Hadith collections, and the in-app fiqh FAQ library. Results display source references and available hadith grading.
@@ -24,7 +27,7 @@ The Android package ID is intentionally different from the upstream Aya app so b
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.x-blue?style=flat-square&logo=flutter" alt="Flutter">
   <img src="https://img.shields.io/badge/Kotlin-Native-purple?style=flat-square&logo=kotlin" alt="Kotlin">
-  <img src="https://img.shields.io/badge/Platform-Android%207%E2%80%9316-brightgreen?style=flat-square&logo=android" alt="Android 7–16">
+  <img src="https://img.shields.io/badge/Platform-Android%208%E2%80%9316-brightgreen?style=flat-square&logo=android" alt="Android 8–16">
   <img src="https://img.shields.io/badge/Platform-iOS-lightgrey?style=flat-square&logo=apple" alt="iOS">
   <img src="https://img.shields.io/f-droid/v/com.quran.aya?style=flat-square&logo=f-droid&logoColor=white&color=00B0FF" alt="F-Droid">
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="MIT">

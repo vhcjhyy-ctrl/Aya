@@ -6,6 +6,7 @@
       "title": "Sheikh Ahmed Voice Hifz, Reciter Selection & Performance Refresh",
       "changes": {
         "en": [
+          "Offline Voice Assistant — Download a ~533 MB model once, then hold Arabic conversations on-device with no API key; guided Quran memorization and word-match feedback are connected to the local Quran catalogue",
           "Sheikh Ahmed Voice Hifz — Choose real MP3Quran recitation sources, hide the ayah during recitation, and hear spoken feedback after the approximate word-match comparison",
           "Random Hifz Review — Start a blind recall quiz from previously memorized ayahs",
           "Faster Islamic Assistant — Reduced local search fan-out and moved independent preparation work off the response critical path",
@@ -14,6 +15,7 @@
           "Calmer Visual Palette — Refreshed light and dark themes with softer green, ivory, and muted bronze tones"
         ],
         "ar": [
+          "المساعد الصوتي المحلي — تنزيل نموذج مرة واحدة (نحو 533 ميجابايت) ثم إجراء حوار عربي على الجهاز بلا مفتاح API، مع ربط اختيار السورة والتسميع بالمصحف المحلي",
           "مساعد الشيخ أحمد محمد — اختيار مصدر تلاوة حقيقي من MP3Quran، وإخفاء الآية أثناء التسميع، وسماع نتيجة المطابقة اللفظية التقريبية",
           "اختبار حفظ عشوائي — اختبار استرجاع آية من المحفوظ دون إظهار النص",
           "تسريع المساعد الإسلامي — تقليل عمليات البحث المتوازية ونقل الأعمال المستقلة خارج مسار الاستجابة",

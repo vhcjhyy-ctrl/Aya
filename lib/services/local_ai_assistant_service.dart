@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 class LocalAiAssistantService {
   static const String modelFileName = 'Qwen3.5-0.8B-Q4_K_M.gguf';
   static const String modelUrl =
-      'https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/$modelFileName';
+      'https://huggingface.co/jc-builds/Qwen3.5-0.8B-Q4_K_M-GGUF/resolve/main/$modelFileName';
 
   final LlamaController _controller = LlamaController();
   bool _loaded = false;
