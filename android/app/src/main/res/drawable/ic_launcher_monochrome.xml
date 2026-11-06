@@ -3,18 +3,41 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <group
-        android:translateX="24"
-        android:translateY="24"
-        android:scaleX="2.5"
-        android:scaleY="2.5">
-        <!-- Crescent Moon -->
-        <path
-            android:fillColor="#FF000000"
-            android:pathData="M12,2C6.48,2 2,6.48 2,12s4.48,10 10,10c0.34,0 0.68,-0.02 1.01,-0.06 -2.99,-1.42 -5.01,-4.52 -5.01,-8.04s2.02,-6.62 5.01,-8.04C12.68,2.02 12.34,2 12,2z" />
-        <!-- Star -->
-        <path
-            android:fillColor="#FF000000"
-            android:pathData="M19,9.5l0.7,1.4 1.5,0.2 -1.1,1.1 0.3,1.5 -1.4,-0.7 -1.4,0.7 0.3,-1.5 -1.1,-1.1 1.5,-0.2z" />
-    </group>
+    <!-- Open book -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M10,54 C25,46 41,48 53,58 L53,91 C40,82 24,80 10,87 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M55,58 C67,48 83,46 98,54 L98,87 C84,80 68,82 55,91 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M15,57 C27,51 40,53 50,61 L50,84 C39,78 26,77 15,82 Z" />
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M58,61 C68,53 81,51 93,57 L93,82 C82,77 69,78 58,84 Z" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1.4"
+        android:strokeLineCap="round"
+        android:pathData="M54,59 L54,90" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:pathData="M22,62 C32,59 40,62 46,67 M62,67 C69,62 77,59 86,62" />
+    <!-- Golden feather pen -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M50,72 C50,52 55,28 79,10 C89,31 79,51 50,72 Z" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M50,72 C61,50 70,29 79,10" />
+    <path
+        android:strokeColor="#FF000000"
+        android:strokeWidth="1"
+        android:strokeLineCap="round"
+        android:pathData="M62,48 L75,43 M58,57 L72,54 M66,34 L80,30" />
 </vector>
