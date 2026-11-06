@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'dart:convert';
 
 import 'package:audioplayers/audioplayers.dart';
@@ -345,6 +346,21 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _tabs.animateTo(0);
   }
 
+  Future<void> _startRandomReview() async {
+    final candidates = _history
+        .where((entry) => entry.value['status'] == 'memorized')
+        .toList();
+    if (candidates.isEmpty) {
+      _toast('احفظ بعض الآيات أولًا، ثم ابدأ الاختبار العشوائي.');
+      return;
+    }
+    candidates.shuffle(Random());
+    await _openEntry(candidates.first);
+    if (!mounted) return;
+    setState(() => _showText = false);
+    _toast('اختبار عشوائي: سمّع الآية من حفظك دون النظر إلى النص.');
+  }
+
   void _toast(String text) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
@@ -629,6 +645,13 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           icon: const Icon(Icons.play_arrow_rounded),
           label: const Text('ابدأ مراجعة المستحق'),
           style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton.icon(
+          onPressed: _memorizedCount == 0 ? null : _startRandomReview,
+          icon: const Icon(Icons.shuffle_rounded),
+          label: const Text('اختبار عشوائي من محفوظاتك'),
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
         ),
         const SizedBox(height: 17),
         Text('سجل الحفظ والمراجعة', style: TextStyle(color: scheme.primary, fontWeight: FontWeight.bold, fontSize: 17)),
