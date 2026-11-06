@@ -702,6 +702,8 @@ class ApiService {
       'ar.hanirifai': 'ar.rifai',
       'ar.muhammadayyoub': 'ar.muhammadayoub',
       'ar.saoodshuraym': 'ar.shuraim',
+      'ar.ahmedajamy': 'ar.ajamy',
+      'ar.saadalghamidi': 'ar.saadalghamdi',
     };
     return aliases[reciter] ?? reciter;
   }
