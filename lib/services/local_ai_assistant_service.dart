@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+
 import 'package:llama_flutter_android/llama_flutter_android.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -7,8 +9,11 @@ import 'package:path_provider/path_provider.dart';
 /// The GGUF file is downloaded once; no API key or hosted inference is used.
 class LocalAiAssistantService {
   static const String modelFileName = 'Qwen3.5-0.8B-Q4_K_M.gguf';
+  static const int expectedModelBytes = 527502816;
+  static const String expectedModelSha256 =
+      'f5b14da98939b60bbe1019a964eba656407e1e0b64f1fe3003ff6d650e93bfec';
   static const String modelUrl =
-      'https://huggingface.co/jc-builds/Qwen3.5-0.8B-Q4_K_M-GGUF/resolve/main/$modelFileName';
+      'https://huggingface.co/lmstudio-community/Qwen3.5-0.8B-GGUF/resolve/7925ccdc665d4efdb1034791e6b553e11128e6f8/$modelFileName';
 
   final LlamaController _controller = LlamaController();
   bool _loaded = false;
@@ -31,7 +36,7 @@ class LocalAiAssistantService {
   Future<bool> isModelDownloaded() async {
     final file = File(await _modelPath());
     if (!await file.exists()) return false;
-    return await file.length() > 300 * 1024 * 1024;
+    return await file.length() == expectedModelBytes;
   }
 
   Future<void> cancelDownload() async {
@@ -101,10 +106,17 @@ class LocalAiAssistantService {
         throw StateError('أُلغي تنزيل نموذج المساعد.');
       }
       final actualLength = await partial.length();
-      if (actualLength < 300 * 1024 * 1024 ||
+      if (actualLength != expectedModelBytes ||
           (total > 0 && actualLength != total)) {
         throw const FileSystemException(
           'ملف النموذج غير مكتمل. أعد تنزيله مع اتصال مستقر.',
+        );
+      }
+
+      final digest = await sha256.bind(partial.openRead()).first;
+      if (digest.toString() != expectedModelSha256) {
+        throw const FileSystemException(
+          'فشل التحقق من سلامة نموذج المساعد (SHA-256). أعد التنزيل من المصدر الرسمي.',
         );
       }
 
