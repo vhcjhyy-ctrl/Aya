@@ -85,7 +85,12 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           if (status == 'notListening' || status == 'done') {
             setState(() {
               _listening = false;
-              if (!_commandMode) _compare();
+              if (_commandMode) {
+                _commandMode = false;
+                _status = 'لم ألتقط أمرًا صوتيًا. اضغط زر الميكروفون وحاول مجددًا.';
+              } else {
+                _compare();
+              }
             });
           } else if (status == 'listening') {
             setState(() => _listening = true);
@@ -188,6 +193,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _start() async {
+    _commandMode = false;
     if (!_speechReady || _ayah == null) {
       _toast('خدمة التعرف العربية غير جاهزة. فعّلها وثبّت اللغة العربية في إعدادات الهاتف.');
       return;
