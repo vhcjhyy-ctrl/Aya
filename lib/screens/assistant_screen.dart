@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../data/fiqh_data.dart';
 import '../models/fiqh_model.dart';
+import 'fiqh/fiqh_topic_detail_screen.dart';
 import '../services/database_service.dart';
 import '../services/hadith_database_service.dart';
 import '../services/translation_service.dart';
@@ -337,6 +338,21 @@ class _AssistantScreenState extends State<AssistantScreen> {
     }
   }
 
+  void _clearConversation() {
+    setState(() {
+      _turns
+        ..clear()
+        ..add(
+          _AssistantTurn(
+            text: TranslationService.isArabic
+                ? 'تم مسح المحادثة. اكتب سؤالك الجديد للبحث في المصادر الإسلامية.'
+                : 'Conversation cleared. Enter a new question to search the Islamic sources.',
+          ),
+        );
+    });
+    _scrollToBottom();
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -430,6 +446,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
             ),
           ],
         ),
+        actions: [
+          IconButton(
+            tooltip: isArabic ? 'مسح المحادثة' : 'Clear conversation',
+            icon: const Icon(Icons.delete_sweep_outlined),
+            onPressed: _turns.length <= 1 ? null : _clearConversation,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -567,6 +590,26 @@ class _AssistantScreenState extends State<AssistantScreen> {
               ),
             ),
           ),
+          if (!turn.isUser)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton.icon(
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: turn.text));
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        isArabic ? 'تم نسخ الرد' : 'Response copied',
+                      ),
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.copy_rounded, size: 15),
+                label: Text(isArabic ? 'نسخ الرد' : 'Copy response'),
+              ),
+            ),
           if (turn.ayahs.isNotEmpty ||
               turn.hadiths.isNotEmpty ||
               turn.fiqhMatches.isNotEmpty) ...[
@@ -714,6 +757,24 @@ class _AssistantScreenState extends State<AssistantScreen> {
                 fontSize: 10,
                 height: 1.5,
                 color: theme.textTheme.bodySmall?.color,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FiqhTopicDetailScreen(topic: topic),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                label: Text(
+                  isArabic ? 'عرض الموضوع كاملًا' : 'Open full topic',
+                ),
               ),
             ),
           ],
