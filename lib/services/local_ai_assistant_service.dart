@@ -18,11 +18,11 @@ class LocalAiAssistantService {
 
   Future<String> _modelPath() async {
     final directory = await getApplicationSupportDirectory();
-    final modelsDirectory = Directory('\${directory.path}/qalam-muslim-models');
+    final modelsDirectory = Directory('${directory.path}/qalam-muslim-models');
     if (!await modelsDirectory.exists()) {
       await modelsDirectory.create(recursive: true);
     }
-    return '\${modelsDirectory.path}/$modelFileName';
+    return '${modelsDirectory.path}/$modelFileName';
   }
 
   Future<bool> isModelDownloaded() async {
@@ -56,7 +56,7 @@ class LocalAiAssistantService {
       final response = await request.close();
       if (response.statusCode != HttpStatus.ok) {
         throw HttpException(
-          'تعذّر تنزيل نموذج المساعد (HTTP \${response.statusCode}).',
+          'تعذّر تنزيل نموذج المساعد (HTTP ${response.statusCode}).',
           uri: Uri.parse(modelUrl),
         );
       }

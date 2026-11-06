@@ -275,7 +275,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             setState(() {
               _assistantDownloadProgress = progress;
               _assistantModelStatus =
-                  'تنزيل النموذج \${(progress * 100).round()}%';
+                  'تنزيل النموذج ${(progress * 100).round()}%';
             });
           },
         );
@@ -291,7 +291,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     } catch (error) {
       if (mounted) {
         setState(() {
-          _assistantModelStatus = 'تعذّر تجهيز المساعد: \${error.toString()}';
+          _assistantModelStatus = 'تعذّر تجهيز المساعد: ${error.toString()}';
         });
         _toast('تحقق من مساحة التخزين والاتصال ثم أعد المحاولة.');
       }
@@ -443,14 +443,14 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           await _move(1);
           _assistantPhase = _AssistantPhase.askingStart;
           await _assistantSpeakAndListen(
-            'انتقلنا إلى الآية \${_ayah?.numberInSurah ?? 1}. هل نبدأ تسميعها؟ قل ابدأ.',
+            'انتقلنا إلى الآية ${_ayah?.numberInSurah ?? 1}. هل نبدأ تسميعها؟ قل ابدأ.',
           );
           return;
         case QuranVoiceCommand.previous:
           await _move(-1);
           _assistantPhase = _AssistantPhase.askingStart;
           await _assistantSpeakAndListen(
-            'عدنا إلى الآية \${_ayah?.numberInSurah ?? 1}. هل تعيد تسميعها؟ قل ابدأ.',
+            'عدنا إلى الآية ${_ayah?.numberInSurah ?? 1}. هل تعيد تسميعها؟ قل ابدأ.',
           );
           return;
         case QuranVoiceCommand.start:
@@ -485,7 +485,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       _assistantPhase = _AssistantPhase.askingStart;
     });
     await _assistantSpeakAndListen(
-      'تمام يا مهندس أحمد محمد. اخترت \${surah.name}. '
+      'تمام يا مهندس أحمد محمد. اخترت ${surah.name}. '
       'هل نبدأ من أول آية؟ قل ابدأ التسميع، أو اذكر سورة أخرى.',
     );
   }
@@ -546,7 +546,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       if (missing.isNotEmpty) details.add('كلمات لم يلتقطها الهاتف: $missing');
       if (extra.isNotEmpty) details.add('وكلمات إضافية التقطها: $extra');
       feedback =
-          'توقف هنا للمراجعة يا مهندس أحمد محمد. \${details.join('، ')}. '
+          'توقف هنا للمراجعة يا مهندس أحمد محمد. ${details.join('، ')}. '
           'قد يكون الاختلاف من التعرف الصوتي نفسه، لذلك لا أعدّه حكمًا بأنك أخطأت في القرآن. '
           'هل تريد إعادة الآية، أم إظهار النص، أم الانتقال؟';
     }
