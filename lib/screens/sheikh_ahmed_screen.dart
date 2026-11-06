@@ -65,6 +65,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   bool _assistantBusy = false;
   bool _assistantConversationActive = false;
   bool _assistantListening = false;
+  bool _assistantSpeaking = false;
   bool _assistantResultProcessing = false;
   bool _assistantFinalResultHandled = true;
   bool _assistantManualRecognitionStop = false;
@@ -374,12 +375,28 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _assistantSpeak(String message) async {
-    if (_ttsReady) {
+    if (!_ttsReady) {
+      _toast(message);
+      return;
+    }
+    if (mounted) setState(() => _assistantSpeaking = true);
+    try {
       await _tts.stop();
       await _tts.speak(message);
-    } else {
-      _toast(message);
+    } finally {
+      if (mounted) setState(() => _assistantSpeaking = false);
     }
+  }
+
+  Future<void> _resumeAssistantListening() async {
+    if (!_assistantConversationActive ||
+        _assistantListening ||
+        _assistantSpeaking ||
+        _assistantPhase == _AssistantPhase.reciting) {
+      return;
+    }
+    _assistantNoSpeechRetries = 0;
+    await _listenForAssistantReply();
   }
 
   Future<void> _assistantSpeakAndListen(String message) async {
@@ -717,6 +734,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _assistantConversationActive = false;
     _assistantPhase = _AssistantPhase.idle;
     _assistantListening = false;
+    _assistantSpeaking = false;
     _assistantFinalResultHandled = true;
     _assistantNoSpeechRetries = 0;
     await _speech.stop();
@@ -788,13 +806,21 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                 ),
             ],
             const SizedBox(height: 10),
-            if (_assistantConversationActive)
+            if (_assistantConversationActive) ...[
               OutlinedButton.icon(
                 onPressed: _stopVoiceAssistant,
                 icon: const Icon(Icons.stop_circle_outlined),
                 label: const Text('إنهاء الحوار'),
-              )
-            else
+              ),
+              if (!_assistantListening &&
+                  !_assistantSpeaking &&
+                  _assistantPhase != _AssistantPhase.reciting)
+                FilledButton.tonalIcon(
+                  onPressed: _resumeAssistantListening,
+                  icon: const Icon(Icons.mic_rounded),
+                  label: const Text('استمع مجددًا'),
+                ),
+            ] else
               FilledButton.icon(
                 onPressed: _assistantBusy ? null : _prepareVoiceAssistant,
                 icon: Icon(
@@ -1185,6 +1211,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _tabs.dispose();
     _assistantConversationActive = false;
     _assistantListening = false;
+    _assistantSpeaking = false;
     _assistantFinalResultHandled = true;
     unawaited(_localAssistant.cancelDownload());
     _speech.cancel();
