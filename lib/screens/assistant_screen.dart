@@ -311,6 +311,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
       }));
       final hadithReady = await hadithReadyFuture;
       if (!hadithReady) {
+        unawaited(gradesFuture);
         _prepareHadithIndexInBackground(database, lang);
       } else {
         await gradesFuture;
