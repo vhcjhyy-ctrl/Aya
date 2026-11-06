@@ -86,6 +86,9 @@ class QuranVoiceIntent {
         phrase.contains('ابدا التسميع')) {
       return QuranVoiceCommand.start;
     }
+    if (phrase.contains('اتممت المراجعه')) {
+      return QuranVoiceCommand.markMemorized;
+    }
     if (words.any(const {'راجعها', 'راجع', 'مراجعه', 'صعبه'}.contains) ||
         phrase.contains('احتاج مراجعه') ||
         phrase.contains('تحتاج مراجعه') ||
