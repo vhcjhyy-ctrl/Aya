@@ -6,6 +6,10 @@ on:
       - qalam-muslim-development
   workflow_dispatch:
 
+concurrency:
+  group: qalam-muslim-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
