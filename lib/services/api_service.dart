@@ -732,7 +732,7 @@ class ApiService {
           : '$server/$formattedNumber.mp3';
     }
     final edition = _canonicalAudioEdition(reciter);
-    return 'https://cdn.islamic.network/quran/audio/128/$edition/$surahNumber.mp3';
+    return 'https://cdn.islamic.network/quran/audio-surah/128/$edition/$surahNumber.mp3';
   }
 
   static String buildSurahAudioUrlForQiraat(
