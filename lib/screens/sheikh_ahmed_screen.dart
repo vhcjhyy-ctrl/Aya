@@ -43,6 +43,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   Map<String, dynamic> _records = {};
   int _dailyTarget = 5;
   bool _repeatReference = false;
+  bool _blindRecallMode = false;
   String _selectedReciter = 'ar.alafasy';
 
   Ayah? get _ayah => _ayahs.isEmpty ? null : _ayahs[_index];
@@ -266,7 +267,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       _index = next;
       _recognized = '';
       _result = null;
-      _showText = true;
+      _showText = !_blindRecallMode;
       _listening = false;
       _status = 'آية جديدة. استعد للتسميع.';
     });
@@ -347,7 +348,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _openEntry(MapEntry<String, Map<String, dynamic>> entry) async {
+    _blindRecallMode = false;
     await _loadSurah(entry.value['surah'] as int? ?? 1, ayahNumber: entry.value['ayah'] as int? ?? 1);
+    if (!mounted) return;
+    setState(() => _showText = true);
     _tabs.animateTo(0);
   }
 
@@ -362,6 +366,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     candidates.shuffle(Random());
     await _openEntry(candidates.first);
     if (!mounted) return;
+    _blindRecallMode = true;
     setState(() => _showText = false);
     _toast('اختبار عشوائي: سمّع الآية من حفظك دون النظر إلى النص.');
   }
