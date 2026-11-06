@@ -42,5 +42,14 @@ void main() {
     expect(sudais, contains('/ar.sudais/262.mp3'));
     expect(abdulbasit, contains('/ar.abdulbasit/262.mp3'));
     expect(shuraim, contains('/ar.shuraim/2.mp3'));
+
+    final alafasySurah = ApiService.buildSurahAudioUrl(
+      18,
+      reciter: 'ar.alafasy',
+    );
+    expect(
+      alafasySurah,
+      'https://cdn.islamic.network/quran/audio-surah/128/ar.alafasy/18.mp3',
+    );
   });
 }
