@@ -3,9 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../data/fiqh_data.dart';
+import '../models/fiqh_model.dart';
 import '../services/database_service.dart';
 import '../services/hadith_database_service.dart';
 import '../services/translation_service.dart';
+import '../utils/text_helpers.dart';
 
 class AssistantScreen extends StatefulWidget {
   const AssistantScreen({super.key});
@@ -88,6 +91,102 @@ class _AssistantScreenState extends State<AssistantScreen> {
     return unique.reversed.take(4).toList();
   }
 
+  String _normalizeSearchText(String value) {
+    return stripTashkeel(value)
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^\u0600-\u06FFa-z0-9]+'), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
+  List<_FiqhMatch> _searchFiqhTopics(
+    String question,
+    List<String> keywords,
+  ) {
+    final normalizedQuestion = _normalizeSearchText(question);
+    final terms = keywords
+        .map(_normalizeSearchText)
+        .where((term) => term.length >= 2)
+        .toSet()
+        .toList();
+    final isArabic = TranslationService.isArabic;
+    final matches = <_FiqhMatch>[];
+
+    for (final topic in FiqhData.topics) {
+      final title = _normalizeSearchText(topic.getTitle(isArabic));
+      final summary = _normalizeSearchText(topic.getSummary(isArabic));
+      final topicKeywords = topic.keywords
+          .map(_normalizeSearchText)
+          .where((word) => word.isNotEmpty)
+          .toList();
+      final sectionsText = topic.sections
+          .expand((section) => <String>[
+                section.getTitle(isArabic),
+                section.getContent(isArabic),
+                ...section.getBulletPoints(isArabic),
+              ])
+          .map(_normalizeSearchText)
+          .join(' ');
+
+      var topicScore = 0;
+      for (final term in terms) {
+        if (title.contains(term)) topicScore += 3;
+        if (summary.contains(term)) topicScore += 2;
+        if (topicKeywords.any((keyword) => keyword.contains(term) || term.contains(keyword))) {
+          topicScore += 3;
+        }
+        if (sectionsText.contains(term)) topicScore += 1;
+      }
+
+      FiqhFaq? bestFaq;
+      var bestFaqScore = 0;
+      for (final faq in topic.faqs) {
+        final faqQuestion = _normalizeSearchText(faq.getQuestion(isArabic));
+        final faqAnswer = _normalizeSearchText(faq.getAnswer(isArabic));
+        var score = 0;
+
+        if (normalizedQuestion.length >= 7 &&
+            (faqQuestion.contains(normalizedQuestion) ||
+                normalizedQuestion.contains(faqQuestion))) {
+          score += 12;
+        }
+
+        for (final term in terms) {
+          if (faqQuestion.contains(term)) {
+            score += 5;
+          } else if (faqAnswer.contains(term)) {
+            score += 1;
+          }
+        }
+
+        if (score > bestFaqScore) {
+          bestFaq = faq;
+          bestFaqScore = score;
+        }
+      }
+
+      if (bestFaq != null && bestFaqScore >= 5) {
+        matches.add(
+          _FiqhMatch(
+            topic: topic,
+            faq: bestFaq,
+            score: bestFaqScore + topicScore,
+          ),
+        );
+      } else if (topicScore >= 6) {
+        matches.add(
+          _FiqhMatch(
+            topic: topic,
+            score: topicScore,
+          ),
+        );
+      }
+    }
+
+    matches.sort((a, b) => b.score.compareTo(a.score));
+    return matches.take(3).toList();
+  }
+
   Future<void> _ensureHadithBooks(DatabaseService database, String lang) async {
     Future<void> seed() async {
       for (final bookId in _coreHadithBooks) {
@@ -137,6 +236,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
       final keywords = _keywords(question);
       final searchTerms = keywords.isEmpty ? <String>[question] : keywords;
+      final fiqhMatches = _searchFiqhTopics(question, keywords);
       final ayahRows = <String, Map<String, dynamic>>{};
       final ayahScores = <String, int>{};
       final hadithRows = <String, Map<String, dynamic>>{};
@@ -172,13 +272,19 @@ class _AssistantScreenState extends State<AssistantScreen> {
       final ayahs = rankedAyahs.take(4).map((entry) => entry.value).toList();
       final hadiths = rankedHadiths.take(4).map((entry) => entry.value).toList();
 
-      final responseText = ayahs.isEmpty && hadiths.isEmpty
+      final hasAnyEvidence =
+          ayahs.isNotEmpty || hadiths.isNotEmpty || fiqhMatches.isNotEmpty;
+      final responseText = !hasAnyEvidence
           ? (TranslationService.isArabic
-              ? 'لم أعثر على نص مطابق في المصادر المحلية التي تم البحث فيها. جرّب كلمات أوضح، مثل: الصلاة، الصيام، الزكاة، بر الوالدين. لا أختلق إجابة عند غياب الدليل.'
-              : 'No matching text was found in the local sources. Try clearer keywords. I will not invent an answer when no reference is available.')
-          : (TranslationService.isArabic
-              ? 'عُثر على نصوص ذات صلة بسؤالك. راجع الآيات والأحاديث ومراجعها أدناه؛ هذه نتائج استدلال نصي وليست فتوى مستقلة.'
-              : 'Relevant source texts were found. Review the verses, narrations, and references below. These are retrieved sources, not an independent fatwa.');
+              ? 'لم أعثر على جواب مطابق في مكتبة الفقه أو نصوص القرآن والأحاديث المتاحة محليًا. جرّب صياغة السؤال بكلمات أوضح. لا أختلق حكمًا شرعيًا عند غياب الدليل.'
+              : 'No close answer was found in the local fiqh library, Quran, or hadith texts. Try clearer wording. I will not invent a religious ruling without a source.')
+          : (fiqhMatches.isNotEmpty
+              ? (TranslationService.isArabic
+                  ? 'وجدت مادة فقهية ذات صلة من مكتبة التطبيق، وأرفقت معها مواضع الأدلة المتاحة. راجع التنبيه بشأن اختلاف المسائل الفقهية.'
+                  : 'I found relevant material in the app’s fiqh library and included its available evidence references. Review the note about differences in fiqh rulings.')
+              : (TranslationService.isArabic
+                  ? 'عُثر على نصوص ذات صلة بسؤالك. راجع الآيات والأحاديث ومراجعها أدناه؛ هذه نتائج بحث موثقة وليست فتوى مستقلة.'
+                  : 'Relevant source texts were found. Review the verses, narrations, and references below. These are retrieved sources, not an independent fatwa.'));
 
       if (!mounted) return;
       setState(() {
@@ -187,6 +293,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
             text: responseText,
             ayahs: ayahs,
             hadiths: hadiths,
+            fiqhMatches: fiqhMatches,
           ),
         );
         _isSearching = false;
@@ -440,8 +547,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
               ),
             ),
           ),
-          if (turn.ayahs.isNotEmpty || turn.hadiths.isNotEmpty) ...[
+          if (turn.ayahs.isNotEmpty ||
+              turn.hadiths.isNotEmpty ||
+              turn.fiqhMatches.isNotEmpty) ...[
             const SizedBox(height: 12),
+            if (turn.fiqhMatches.isNotEmpty) ...[
+              _sectionTitle(theme, isArabic ? 'من مكتبة الفقه الإسلامي' : 'From the fiqh library'),
+              const SizedBox(height: 8),
+              for (final match in turn.fiqhMatches) _buildFiqhCard(theme, match),
+            ],
             if (turn.ayahs.isNotEmpty) ...[
               _sectionTitle(theme, isArabic ? 'من القرآن الكريم' : 'From the Quran'),
               const SizedBox(height: 8),
@@ -466,6 +580,124 @@ class _AssistantScreenState extends State<AssistantScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildFiqhCard(ThemeData theme, _FiqhMatch match) {
+    final isArabic = TranslationService.isArabic;
+    final topic = match.topic;
+    final title = topic.getTitle(isArabic);
+    final gold = const Color(0xFFE5C158);
+    final evidence = topic.evidences.take(3).toList();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 9),
+      color: theme.cardColor,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                color: gold,
+                fontWeight: FontWeight.w800,
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (match.faq != null) ...[
+              Text(
+                match.faq!.getQuestion(isArabic),
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
+              const SizedBox(height: 7),
+              Text(
+                match.faq!.getAnswer(isArabic),
+                style: TextStyle(
+                  height: 1.65,
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
+            ] else ...[
+              Text(
+                topic.getSummary(isArabic),
+                style: TextStyle(
+                  height: 1.6,
+                  color: theme.textTheme.bodyLarge?.color,
+                ),
+              ),
+              if (topic.sections.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  topic.sections.first.getTitle(isArabic),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  topic.sections.first.getContent(isArabic),
+                  style: TextStyle(
+                    height: 1.55,
+                    color: theme.textTheme.bodyMedium?.color,
+                  ),
+                ),
+              ],
+            ],
+            if (evidence.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Divider(color: theme.dividerColor.withValues(alpha: 0.45)),
+              Text(
+                isArabic ? 'المراجع المذكورة في الموضوع:' : 'References listed in this topic:',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: theme.textTheme.bodySmall?.color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              for (final item in evidence)
+                Padding(
+                  padding: const EdgeInsets.only(top: 3),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        item.type == 'quran' ? Icons.menu_book : Icons.library_books,
+                        size: 14,
+                        color: gold,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          item.reference,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.textTheme.bodySmall?.color,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+            const SizedBox(height: 8),
+            Text(
+              isArabic
+                  ? 'المصدر: مادة فقهية داخل التطبيق. قد تختلف بعض المسائل باختلاف المذاهب وأقوال أهل العلم.'
+                  : 'Source: fiqh material bundled with the app. Some rulings differ across schools and scholarly opinions.',
+              style: TextStyle(
+                fontSize: 10,
+                height: 1.5,
+                color: theme.textTheme.bodySmall?.color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -647,11 +879,25 @@ class _AssistantTurn {
   final bool isUser;
   final List<Map<String, dynamic>> ayahs;
   final List<Map<String, dynamic>> hadiths;
+  final List<_FiqhMatch> fiqhMatches;
 
   const _AssistantTurn({
     required this.text,
     this.isUser = false,
     this.ayahs = const [],
     this.hadiths = const [],
+    this.fiqhMatches = const [],
+  });
+}
+
+class _FiqhMatch {
+  final FiqhTopic topic;
+  final FiqhFaq? faq;
+  final int score;
+
+  const _FiqhMatch({
+    required this.topic,
+    this.faq,
+    required this.score,
   });
 }
