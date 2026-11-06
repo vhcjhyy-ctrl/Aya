@@ -6,15 +6,19 @@
       "title": "Sheikh Ahmed Voice Hifz, Reciter Selection & Performance Refresh",
       "changes": {
         "en": [
-          "Sheikh Ahmed Voice Hifz — Select from 18 Quran reciters, hide the ayah during recitation, and hear spoken feedback after the word-match comparison",
+          "Sheikh Ahmed Voice Hifz — Select from 19 Quran reciters, hide the ayah during recitation, and hear spoken feedback after the word-match comparison",
           "Random Hifz Review — Start a blind recall quiz from previously memorized ayahs",
           "Faster Islamic Assistant — Reduced local search fan-out and moved independent preparation work off the response critical path",
+          "Memorization Repeat — Loop the selected ayah until stopped manually",
+          "Reliable Audio Paths — Use the dedicated CDN route for full-surah recitations and normalize legacy reciter IDs",
           "Calmer Visual Palette — Refreshed light and dark themes with softer green, ivory, and muted bronze tones"
         ],
         "ar": [
-          "مساعد الشيخ أحمد محمد — اختيار من ١٨ قارئًا، وإخفاء الآية أثناء التسميع، وسماع التقييم اللفظي صوتيًا",
+          "مساعد الشيخ أحمد محمد — اختيار من ١٩ قارئًا، وإخفاء الآية أثناء التسميع، وسماع التقييم اللفظي صوتيًا",
           "اختبار حفظ عشوائي — اختبار استرجاع آية من المحفوظ دون إظهار النص",
           "تسريع المساعد الإسلامي — تقليل عمليات البحث المتوازية ونقل الأعمال المستقلة خارج مسار الاستجابة",
+          "تكرار الحفظ — تكرار صوت الآية المختارة حتى الإيقاف اليدوي",
+          "إصلاح مسارات الصوت — تصحيح روابط السور كاملة وتوحيد معرّفات القراء القديمة",
           "ألوان أكثر راحة — تحديث الوضعين الفاتح والداكن بدرجات خضراء هادئة وعاجية ونحاسية مطفأة"
         ]
       }
