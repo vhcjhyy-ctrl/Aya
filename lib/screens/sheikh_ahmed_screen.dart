@@ -41,6 +41,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   QuranRecitationComparison? _result;
   Map<String, dynamic> _records = {};
   int _dailyTarget = 5;
+  String _selectedReciter = 'ar.alafasy';
 
   Ayah? get _ayah => _ayahs.isEmpty ? null : _ayahs[_index];
   String get _recordKey => _surah.toString() + ':' + (_ayah?.numberInSurah.toString() ?? '0');
@@ -51,6 +52,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _tabs = TabController(length: 2, vsync: this);
     _surah = widget.storage.getInt('sheikh_selected_surah', defaultValue: 1);
     _dailyTarget = widget.storage.getInt('hifz_daily_target', defaultValue: 5);
+    final savedReciter = widget.storage.getString('default_reciter', defaultValue: 'ar.alafasy');
+    _selectedReciter = availableReciters.any((reciter) => reciter.id == savedReciter)
+        ? savedReciter
+        : 'ar.alafasy';
     _loadRecords();
     _loadSurah(_surah);
     _initSpeech();
@@ -135,7 +140,18 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       return;
     }
     await _tts.stop();
-    await _tts.speak('مرحبًا بك في مساعد التسميع في قلم مسلم. اختر السورة والآية ثم ابدأ التسميع. سأعرض مقارنة تقريبية للنص الذي التقطه الهاتف.');
+    await _tts.speak('مرحبًا بك في مساعد التسميع في قلم مسلم. اختر السورة والقارئ، ثم أخفِ الآية وابدأ التسميع. سأعرض مقارنة لفظية تقريبية، وليست حكمًا على التجويد.');
+  }
+
+  Future<void> _speakResult() async {
+    final result = _result;
+    if (!_ttsReady || result == null) return;
+    await _tts.stop();
+    await _tts.speak(
+      'نسبة التطابق اللفظي التقريبية ${result.similarityPercent} بالمئة. '
+      'التقط الهاتف ${result.matchedWords} كلمة من أصل ${result.expectedWords}. '
+      'راجع الكلمات التي لم يلتقطها، فقد يخطئ التعرف الصوتي في ألفاظ القرآن.',
+    );
   }
 
   Future<void> _loadSurah(int number, {int ayahNumber = 1}) async {
@@ -176,6 +192,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     setState(() {
       _recognized = '';
       _result = null;
+      _showText = false;
       _status = 'الهاتف يستمع إلى تلاوتك الآن...';
       _listening = true;
     });
@@ -220,8 +237,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (current == null) return;
     await _speech.stop();
     await _tts.stop();
-    var reciter = widget.storage.getString('default_reciter', defaultValue: 'ar.alafasy');
-    if (reciter.startsWith('mp3quran_server_')) reciter = 'ar.alafasy';
+    final reciter = _selectedReciter;
     final url = ApiService.buildAyahAudioUrl(
       current.number,
       _surah,
@@ -397,6 +413,25 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           },
         ),
         const SizedBox(height: 12),
+        DropdownButtonFormField<String>(
+          value: _selectedReciter,
+          isExpanded: true,
+          decoration: const InputDecoration(
+            labelText: 'اختر القارئ المرجعي',
+            prefixIcon: Icon(Icons.record_voice_over_outlined),
+          ),
+          items: availableReciters.map((reciter) => DropdownMenuItem<String>(
+            value: reciter.id,
+            child: Text(reciter.nameAr, overflow: TextOverflow.ellipsis),
+          )).toList(),
+          onChanged: (value) async {
+            if (value == null) return;
+            await _player.stop();
+            setState(() => _selectedReciter = value);
+            await widget.storage.setString('default_reciter', value);
+          },
+        ),
+        const SizedBox(height: 12),
         if (_loading)
           const Center(child: Padding(
             padding: EdgeInsets.all(24),
@@ -486,6 +521,14 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                     ),
                     const SizedBox(height: 5),
                     Text(_result!.matchedWords.toString() + ' كلمة متطابقة من ' + _result!.expectedWords.toString()),
+                    Align(
+                      alignment: AlignmentDirectional.centerEnd,
+                      child: TextButton.icon(
+                        onPressed: _ttsReady ? _speakResult : null,
+                        icon: const Icon(Icons.volume_up_outlined, size: 18),
+                        label: const Text('استمع إلى التقييم الصوتي'),
+                      ),
+                    ),
                     if (_result!.missingWords.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       Text('كلمات لم يلتقطها الهاتف:', style: TextStyle(color: scheme.error, fontWeight: FontWeight.bold)),
