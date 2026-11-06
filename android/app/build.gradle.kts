@@ -37,7 +37,7 @@ android {
 
 
     defaultConfig {
-        applicationId = "com.quran.aya"
+        applicationId = "com.ahmed.qalammuslim"
         minSdk = flutter.minSdkVersion // Android 5.0
         targetSdk = 36 // Android 16
         versionCode = flutter.versionCode
@@ -48,11 +48,11 @@ android {
     productFlavors {
         create("fdroid") {
             dimension = "distribution"
-            applicationId = "com.quran.aya"
+            applicationId = "com.ahmed.qalammuslim"
         }
         create("play") {
             dimension = "distribution"
-            applicationId = "com.quran.aya"
+            applicationId = "com.ahmed.qalammuslim"
         }
     }
 
