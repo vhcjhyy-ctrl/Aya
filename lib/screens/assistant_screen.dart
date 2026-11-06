@@ -20,8 +20,8 @@ class AssistantScreen extends StatefulWidget {
 class _AssistantScreenState extends State<AssistantScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  final List<_AssistantTurn> _turns = [
-    const _AssistantTurn(
+  late final List<_AssistantTurn> _turns = [
+    _AssistantTurn(
       text: TranslationService.isArabic
           ? 'مرحبًا بك في سؤالك. اكتب مسألتك، وسأبحث في القرآن والأحاديث ومكتبة الفقه داخل التطبيق، وأعرض لك النصوص والمراجع المتاحة.'
           : 'Welcome to Ask. Enter your question and I will search the Quran, Hadith, and the app’s fiqh library, then show the available texts and references.',
