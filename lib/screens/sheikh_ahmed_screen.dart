@@ -250,6 +250,15 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     );
   }
 
+  Future<void> _cancelVoiceAssistantDownload() async {
+    await _localAssistant.cancelDownload();
+    if (mounted) {
+      setState(() {
+        _assistantModelStatus = 'تم طلب إلغاء التنزيل...';
+      });
+    }
+  }
+
   Future<void> _prepareVoiceAssistant() async {
     if (_assistantBusy) return;
     if (!_speechReady || !_ttsReady) {
@@ -280,6 +289,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           },
         );
       }
+      if (!mounted) return;
       setState(() => _assistantModelStatus = 'جارٍ تحميل النموذج في ذاكرة الهاتف...');
       await _localAssistant.loadModel();
       if (!mounted) return;
@@ -290,10 +300,15 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       await _startVoiceAssistant();
     } catch (error) {
       if (mounted) {
+        final cancelled = error.toString().contains('أُلغي تنزيل نموذج المساعد');
         setState(() {
-          _assistantModelStatus = 'تعذّر تجهيز المساعد: ${error.toString()}';
+          _assistantModelStatus = cancelled
+              ? 'أُلغي تنزيل نموذج المساعد.'
+              : 'تعذّر تجهيز المساعد: ' + error.toString();
         });
-        _toast('تحقق من مساحة التخزين والاتصال ثم أعد المحاولة.');
+        if (!cancelled) {
+          _toast('تحقق من مساحة التخزين والاتصال ثم أعد المحاولة.');
+        }
       }
     } finally {
       if (mounted) setState(() => _assistantBusy = false);
@@ -411,8 +426,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         await _selectAssistantSurah(otherSurah);
         return;
       }
-      await _assistantSpeakAndListen(
-        'نحن جاهزون. قل ابدأ التسميع للبدء من أول آية، أو اذكر اسم سورة أخرى.',
+      await _assistantDiscuss(
+        input,
+        followUp: 'أجب عن سؤاله أو حديثه بإيجاز وبأسلوب مشجع، ثم اسأله هل يبدأ التسميع من أول آية أم يختار سورة أخرى.',
       );
       return;
     }
@@ -689,6 +705,15 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             if (_assistantBusy) ...[
               const SizedBox(height: 8),
               LinearProgressIndicator(value: progress),
+              if (_assistantModelStatus.startsWith('تنزيل النموذج'))
+                Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: TextButton.icon(
+                    onPressed: _cancelVoiceAssistantDownload,
+                    icon: const Icon(Icons.close_rounded, size: 17),
+                    label: const Text('إلغاء التنزيل'),
+                  ),
+                ),
             ],
             const SizedBox(height: 10),
             if (_assistantConversationActive)
@@ -1082,6 +1107,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   @override
   void dispose() {
     _tabs.dispose();
+    _assistantConversationActive = false;
+    _assistantListening = false;
+    unawaited(_localAssistant.cancelDownload());
+    unawaited(_localAssistant.stop());
     _speech.cancel();
     _tts.stop();
     _player.dispose();

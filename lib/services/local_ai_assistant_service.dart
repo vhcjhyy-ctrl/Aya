@@ -13,6 +13,9 @@ class LocalAiAssistantService {
   final LlamaController _controller = LlamaController();
   bool _loaded = false;
   String? _loadedPath;
+  bool _cancelDownloadRequested = false;
+  HttpClient? _downloadClient;
+  HttpClientRequest? _activeRequest;
 
   bool get isLoaded => _loaded;
 
@@ -31,6 +34,14 @@ class LocalAiAssistantService {
     return await file.length() > 300 * 1024 * 1024;
   }
 
+  Future<void> cancelDownload() async {
+    _cancelDownloadRequested = true;
+    _activeRequest?.abort(
+      const HttpException('أُلغي تنزيل نموذج المساعد بناءً على طلب المستخدم.'),
+    );
+    _downloadClient?.close(force: true);
+  }
+
   Future<String> downloadModel({
     required void Function(double progress) onProgress,
   }) async {
@@ -44,10 +55,13 @@ class LocalAiAssistantService {
     final partial = File('$path.part');
     if (await partial.exists()) await partial.delete();
 
+    _cancelDownloadRequested = false;
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 30);
+    _downloadClient = client;
     try {
       final request = await client.getUrl(Uri.parse(modelUrl));
+      _activeRequest = request;
       request.followRedirects = true;
       request.headers.set(
         HttpHeaders.userAgentHeader,
@@ -65,7 +79,10 @@ class LocalAiAssistantService {
       var received = 0;
       final sink = partial.openWrite();
       try {
-        await for (final chunk in response) {
+        await for (final chunk in response.timeout(const Duration(minutes: 2))) {
+          if (_cancelDownloadRequested) {
+            throw StateError('أُلغي تنزيل نموذج المساعد.');
+          }
           sink.add(chunk);
           received += chunk.length;
           if (total > 0) {
@@ -77,6 +94,9 @@ class LocalAiAssistantService {
         await sink.close();
       }
 
+      if (_cancelDownloadRequested) {
+        throw StateError('أُلغي تنزيل نموذج المساعد.');
+      }
       final actualLength = await partial.length();
       if (actualLength < 300 * 1024 * 1024 ||
           (total > 0 && actualLength != total)) {
@@ -93,6 +113,8 @@ class LocalAiAssistantService {
       if (await partial.exists()) await partial.delete();
       rethrow;
     } finally {
+      _activeRequest = null;
+      _downloadClient = null;
       client.close(force: true);
     }
   }
