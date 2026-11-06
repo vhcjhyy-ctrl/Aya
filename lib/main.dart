@@ -16,38 +16,67 @@ import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final supportDir = await getApplicationSupportDirectory();
-  final dbDir = Directory('${supportDir.path}/dorar_databases');
-  if (!dbDir.existsSync()) {
-    dbDir.createSync(recursive: true);
-  }
 
-  // Workaround for dorar_hadith package bug where CacheDatabase tries to use Directory.current
-  Directory.current = dbDir.path;
-
-  await DorarHadithFlutter.ensureInitialized(databaseDirectory: dbDir);
-
-  // Migrate huge caches from SharedPreferences to Files to fix startup memory lag
-  await ApiService.migrateCacheToFiles();
-
-  // Initialize Android Alarm Manager (Android only)
+  // Keep the startup path short and prevent auxiliary services from
+  // holding the app on a blank screen if one of them fails.
   try {
-    await AndroidAlarmManager.initialize();
-  } catch (_) {}
+    final supportDir = await getApplicationSupportDirectory();
+    final dbDir = Directory('${supportDir.path}/dorar_databases');
+    await dbDir.create(recursive: true);
+    Directory.current = dbDir.path;
+  } catch (error, stackTrace) {
+    debugPrint('Qalam Muslim data-directory setup failed: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
 
   final storage = await StorageService.getInstance();
   TranslationService.setLanguage(
     storage.getString('lang_code', defaultValue: 'ar'),
   );
 
-  // Initialize Notification Service
-  final notifications = NotificationService();
-  await notifications.init();
-
-  // Initialize Audio Manager
-  AudioManager.instance.init(storage);
-
   runApp(AyaApp(storage: storage));
+
+  // Continue initialization after Flutter has rendered its first frame.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    Future<void>(() async {
+      try {
+        final supportDir = await getApplicationSupportDirectory();
+        final dbDir = Directory('${supportDir.path}/dorar_databases');
+        await dbDir.create(recursive: true);
+        Directory.current = dbDir.path;
+        await DorarHadithFlutter.ensureInitialized(databaseDirectory: dbDir);
+      } catch (error, stackTrace) {
+        debugPrint('Optional hadith service initialization failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+
+      try {
+        await ApiService.migrateCacheToFiles();
+      } catch (error) {
+        debugPrint('Cache migration skipped: $error');
+      }
+
+      try {
+        await AndroidAlarmManager.initialize();
+      } catch (error) {
+        debugPrint('Alarm manager initialization skipped: $error');
+      }
+
+      try {
+        await NotificationService().init();
+      } catch (error, stackTrace) {
+        debugPrint('Notification initialization failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+
+      try {
+        AudioManager.instance.init(storage);
+      } catch (error, stackTrace) {
+        debugPrint('Audio service initialization failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
+    }());
+  });
 }
 
 class AyaApp extends StatefulWidget {
