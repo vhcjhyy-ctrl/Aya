@@ -356,7 +356,6 @@ class _AssistantScreenState extends State<AssistantScreen> {
 
   Widget _buildTurn(ThemeData theme, _AssistantTurn turn) {
     final isArabic = TranslationService.isArabic;
-    final gold = const Color(0xFFE5C158);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
