@@ -62,6 +62,9 @@ class LocalAiAssistantService {
     try {
       final request = await client.getUrl(Uri.parse(modelUrl));
       _activeRequest = request;
+      if (_cancelDownloadRequested) {
+        throw StateError('أُلغي تنزيل نموذج المساعد.');
+      }
       request.followRedirects = true;
       request.headers.set(
         HttpHeaders.userAgentHeader,
