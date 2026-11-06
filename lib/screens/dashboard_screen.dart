@@ -19,6 +19,7 @@ import 'prayer_tracker_screen.dart';
 import 'prophets_stories_screen.dart';
 import 'sirah_screen.dart';
 import 'fiqh/fiqh_screen.dart';
+import 'assistant_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final StorageService storage;
@@ -1008,6 +1009,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                           MaterialPageRoute(
                             builder: (context) =>
                                 FiqhScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.auto_awesome,
+                      title: TranslationService.isArabic ? 'سؤالك' : 'Ask',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const AssistantScreen(),
                           ),
                         );
                       },
