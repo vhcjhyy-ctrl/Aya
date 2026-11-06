@@ -13,6 +13,16 @@ import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../services/quran_recitation_matcher.dart';
 import '../services/reciters_cache_service.dart';
+import '../services/local_ai_assistant_service.dart';
+import '../services/quran_voice_intent.dart';
+
+enum _AssistantPhase {
+  idle,
+  askingWhatMemorized,
+  askingStart,
+  reciting,
+  awaitingFeedback,
+}
 
 class SheikhAhmedScreen extends StatefulWidget {
   final StorageService storage;
@@ -49,6 +59,19 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   String _selectedReciter = '';
   List<Map<String, dynamic>> _referenceReciters = [];
   bool _loadingReferenceReciters = false;
+
+  final LocalAiAssistantService _localAssistant = LocalAiAssistantService();
+  bool _assistantReady = false;
+  bool _assistantBusy = false;
+  bool _assistantConversationActive = false;
+  bool _assistantListening = false;
+  bool _assistantResultProcessing = false;
+  double _assistantDownloadProgress = 0;
+  String _assistantModelStatus = 'مساعد محلي، بلا مفتاح API';
+  _AssistantPhase _assistantPhase = _AssistantPhase.idle;
+  final List<Map<String, String>> _assistantHistory = [];
+  final List<Map<String, String>> _assistantTranscript = [];
+
 
   Ayah? get _ayah => _ayahs.isEmpty ? null : _ayahs[_index];
   String get _recordKey => _surah.toString() + ':' + (_ayah?.numberInSurah.toString() ?? '0');
@@ -146,6 +169,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           if (status == 'notListening' || status == 'done') {
             setState(() {
               _listening = false;
+              if (_assistantListening) _assistantListening = false;
               if (_commandMode) {
                 _commandMode = false;
                 _status = 'لم ألتقط أمرًا صوتيًا. اضغط زر الميكروفون وحاول مجددًا.';
@@ -198,6 +222,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       await _tts.setLanguage('ar-EG');
       await _tts.setSpeechRate(0.46);
       await _tts.setPitch(1.0);
+      await _tts.awaitSpeakCompletion(true);
       _ttsReady = true;
     } catch (_) {
       _ttsReady = false;
@@ -222,6 +247,507 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       'نسبة التطابق اللفظي التقريبية ${result.similarityPercent} بالمئة. '
       'التقط الهاتف ${result.matchedWords} كلمة من أصل ${result.expectedWords}. '
       'راجع الكلمات التي لم يلتقطها، فقد يخطئ التعرف الصوتي في ألفاظ القرآن.',
+    );
+  }
+
+  Future<void> _prepareVoiceAssistant() async {
+    if (_assistantBusy) return;
+    if (!_speechReady || !_ttsReady) {
+      _toast('تأكد من جاهزية الميكروفون والصوت العربي في الهاتف أولًا.');
+      return;
+    }
+    if (_assistantReady) {
+      await _startVoiceAssistant();
+      return;
+    }
+
+    setState(() {
+      _assistantBusy = true;
+      _assistantDownloadProgress = 0;
+      _assistantModelStatus = 'جارٍ تجهيز المساعد المحلي...';
+    });
+    try {
+      if (!await _localAssistant.isModelDownloaded()) {
+        setState(() => _assistantModelStatus = 'تنزيل النموذج لأول مرة — نحو 533 ميجابايت');
+        await _localAssistant.downloadModel(
+          onProgress: (progress) {
+            if (!mounted) return;
+            setState(() {
+              _assistantDownloadProgress = progress;
+              _assistantModelStatus =
+                  'تنزيل النموذج \${(progress * 100).round()}%';
+            });
+          },
+        );
+      }
+      setState(() => _assistantModelStatus = 'جارٍ تحميل النموذج في ذاكرة الهاتف...');
+      await _localAssistant.loadModel();
+      if (!mounted) return;
+      setState(() {
+        _assistantReady = true;
+        _assistantModelStatus = 'المساعد جاهز على هذا الجهاز';
+      });
+      await _startVoiceAssistant();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _assistantModelStatus = 'تعذّر تجهيز المساعد: \${error.toString()}';
+        });
+        _toast('تحقق من مساحة التخزين والاتصال ثم أعد المحاولة.');
+      }
+    } finally {
+      if (mounted) setState(() => _assistantBusy = false);
+    }
+  }
+
+  Future<void> _startVoiceAssistant() async {
+    _assistantHistory.clear();
+    _assistantTranscript.clear();
+    _assistantConversationActive = true;
+    _assistantPhase = _AssistantPhase.askingWhatMemorized;
+    await _assistantSpeakAndListen(
+      'السلام عليكم يا مهندس أحمد محمد. أنا مساعدك الصوتي في قلم مسلم. '
+      'سنتابع الحفظ والمراجعة خطوة بخطوة. ماذا حفظت اليوم؟ اذكر اسم السورة.',
+    );
+  }
+
+  void _addAssistantTranscript(String role, String content) {
+    _assistantTranscript.add({'role': role, 'content': content});
+    if (_assistantTranscript.length > 10) {
+      _assistantTranscript.removeRange(0, _assistantTranscript.length - 10);
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _assistantSpeak(String message) async {
+    if (_ttsReady) {
+      await _tts.stop();
+      await _tts.speak(message);
+    } else {
+      _toast(message);
+    }
+  }
+
+  Future<void> _assistantSpeakAndListen(String message) async {
+    if (!_assistantConversationActive) return;
+    _addAssistantTranscript('assistant', message);
+    await _assistantSpeak(message);
+    if (_assistantConversationActive) {
+      await _listenForAssistantReply();
+    }
+  }
+
+  Future<void> _listenForAssistantReply() async {
+    if (!_assistantConversationActive || !_speechReady) return;
+    try {
+      await _speech.stop();
+      if (!mounted) return;
+      setState(() {
+        _assistantListening = true;
+        _listening = true;
+        _status = 'المساعد يستمع إليك...';
+      });
+      await _speech.listen(
+        localeId: _locale,
+        listenFor: const Duration(seconds: 18),
+        pauseFor: const Duration(seconds: 3),
+        onResult: (event) {
+          if (!mounted) return;
+          setState(() => _recognized = event.recognizedWords);
+          if (event.finalResult) {
+            setState(() {
+              _assistantListening = false;
+              _listening = false;
+            });
+            unawaited(_handleAssistantInput(event.recognizedWords));
+          }
+        },
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _assistantListening = false;
+        _listening = false;
+        _status = 'تعذّر الاستماع. اضغط زر بدء الحوار وحاول مرة أخرى.';
+      });
+    }
+  }
+
+  Future<void> _handleAssistantInput(String rawInput) async {
+    if (!_assistantConversationActive) return;
+    final input = rawInput.trim();
+    if (input.isEmpty) {
+      await _assistantSpeakAndListen('لم أسمع إجابتك بوضوح. تحدث مرة أخرى من فضلك.');
+      return;
+    }
+    _addAssistantTranscript('user', input);
+
+    final command = QuranVoiceIntent.parseCommand(input);
+    if (command == QuranVoiceCommand.stop) {
+      await _stopVoiceAssistant();
+      return;
+    }
+
+    if (_assistantPhase == _AssistantPhase.askingWhatMemorized) {
+      final surahNumber = QuranVoiceIntent.findSurahNumber(input);
+      if (surahNumber != null) {
+        await _selectAssistantSurah(surahNumber);
+        return;
+      }
+      await _assistantDiscuss(
+        input,
+        followUp: 'بعد ردك، اسأل المهندس أحمد محمد مرة أخرى عن اسم السورة التي يريد تسميعها.',
+      );
+      return;
+    }
+
+    if (_assistantPhase == _AssistantPhase.askingStart) {
+      if (command == QuranVoiceCommand.start) {
+        await _startAssistantRecitation();
+        return;
+      }
+      final otherSurah = QuranVoiceIntent.findSurahNumber(input);
+      if (otherSurah != null) {
+        await _selectAssistantSurah(otherSurah);
+        return;
+      }
+      await _assistantSpeakAndListen(
+        'نحن جاهزون. قل ابدأ التسميع للبدء من أول آية، أو اذكر اسم سورة أخرى.',
+      );
+      return;
+    }
+
+    if (_assistantPhase == _AssistantPhase.awaitingFeedback) {
+      switch (command) {
+        case QuranVoiceCommand.repeat:
+          await _startAssistantRecitation();
+          return;
+        case QuranVoiceCommand.showAyah:
+          setState(() => _showText = true);
+          await _assistantSpeakAndListen(
+            'أظهرت نص الآية على الشاشة. راجعها، ثم قل كرر لإعادة التسميع أو التالي للمتابعة.',
+          );
+          return;
+        case QuranVoiceCommand.hideAyah:
+          setState(() => _showText = false);
+          await _assistantSpeakAndListen('أخفيت نص الآية. قل كرر عندما تكون مستعدًا.');
+          return;
+        case QuranVoiceCommand.next:
+          if (_index >= _ayahs.length - 1) {
+            await _assistantSpeakAndListen(
+              'وصلنا إلى آخر آية في السورة. أحسنت في إكمال الجلسة. هل تريد اختيار سورة أخرى؟',
+            );
+            _assistantPhase = _AssistantPhase.askingWhatMemorized;
+            return;
+          }
+          await _move(1);
+          _assistantPhase = _AssistantPhase.askingStart;
+          await _assistantSpeakAndListen(
+            'انتقلنا إلى الآية \${_ayah?.numberInSurah ?? 1}. هل نبدأ تسميعها؟ قل ابدأ.',
+          );
+          return;
+        case QuranVoiceCommand.previous:
+          await _move(-1);
+          _assistantPhase = _AssistantPhase.askingStart;
+          await _assistantSpeakAndListen(
+            'عدنا إلى الآية \${_ayah?.numberInSurah ?? 1}. هل تعيد تسميعها؟ قل ابدأ.',
+          );
+          return;
+        case QuranVoiceCommand.start:
+          await _startAssistantRecitation();
+          return;
+        case QuranVoiceCommand.stop:
+        case QuranVoiceCommand.unknown:
+          await _assistantDiscuss(
+            input,
+            followUp: 'أجب بإيجاز عن كلامه دون اختراع آيات أو إصدار فتوى، ثم اسأله هل يريد إعادة الآية أو إظهارها أو الانتقال إلى التالية.',
+          );
+          return;
+      }
+    }
+
+    if (_assistantPhase == _AssistantPhase.reciting) {
+      await _assistantSpeakAndListen('استمر في التسميع، أو قل قف لإيقاف الجلسة.');
+      return;
+    }
+  }
+
+  Future<void> _selectAssistantSurah(int number) async {
+    await _loadSurah(number);
+    if (!mounted || _ayahs.isEmpty) return;
+    final surah = allOfflineSurahs.firstWhere(
+      (item) => item.number == number,
+      orElse: () => allOfflineSurahs.first,
+    );
+    setState(() {
+      _blindRecallMode = true;
+      _showText = false;
+      _assistantPhase = _AssistantPhase.askingStart;
+    });
+    await _assistantSpeakAndListen(
+      'تمام يا مهندس أحمد محمد. اخترت \${surah.name}. '
+      'هل نبدأ من أول آية؟ قل ابدأ التسميع، أو اذكر سورة أخرى.',
+    );
+  }
+
+  Future<void> _startAssistantRecitation() async {
+    if (_ayah == null) {
+      await _assistantSpeakAndListen('لم تُحمّل آيات السورة بعد. اختر السورة أولًا.');
+      return;
+    }
+    setState(() {
+      _assistantPhase = _AssistantPhase.reciting;
+      _assistantResultProcessing = false;
+      _recognized = '';
+      _result = null;
+      _showText = false;
+      _status = 'استمع إلى تلاوتك للآية الحالية...';
+    });
+    await _start();
+  }
+
+  Future<void> _finishAssistantRecitation(String recognizedText) async {
+    if (_assistantResultProcessing || !_assistantConversationActive ||
+        _assistantPhase != _AssistantPhase.reciting || _ayah == null) {
+      return;
+    }
+    _assistantResultProcessing = true;
+    final normalizedCommand = QuranVoiceIntent.parseCommand(recognizedText);
+    if (normalizedCommand == QuranVoiceCommand.stop) {
+      _assistantResultProcessing = false;
+      await _stopVoiceAssistant();
+      return;
+    }
+
+    final result = QuranRecitationMatcher.compare(
+      expected: _ayah!.text,
+      recognized: recognizedText,
+    );
+    setState(() {
+      _recognized = recognizedText;
+      _result = result;
+      _listening = false;
+      _assistantListening = false;
+      _assistantPhase = _AssistantPhase.awaitingFeedback;
+      _status = 'انتهت المقارنة اللفظية التقريبية. راجع ملاحظات المساعد.';
+    });
+    await _saveAssistantAttempt(result);
+
+    final missing = result.missingWords.take(5).join('، ');
+    final extra = result.extraWords.take(5).join('، ');
+    String feedback;
+    if (result.missingWords.isEmpty && result.extraWords.isEmpty) {
+      feedback =
+          'أحسنت. التقط الهاتف كلمات الآية كاملة في هذه المحاولة. '
+          'هذا فحص لفظي آلي فقط، وليس تقييمًا للتجويد أو المخارج. '
+          'هل ننتقل إلى الآية التالية أم تعيدها؟';
+    } else {
+      final details = <String>[];
+      if (missing.isNotEmpty) details.add('كلمات لم يلتقطها الهاتف: $missing');
+      if (extra.isNotEmpty) details.add('وكلمات إضافية التقطها: $extra');
+      feedback =
+          'توقف هنا للمراجعة يا مهندس أحمد محمد. \${details.join('، ')}. '
+          'قد يكون الاختلاف من التعرف الصوتي نفسه، لذلك لا أعدّه حكمًا بأنك أخطأت في القرآن. '
+          'هل تريد إعادة الآية، أم إظهار النص، أم الانتقال؟';
+    }
+    _assistantResultProcessing = false;
+    await _assistantSpeakAndListen(feedback);
+  }
+
+  Future<void> _saveAssistantAttempt(QuranRecitationComparison result) async {
+    final record = _record(_recordKey);
+    final existing = record['attempts'];
+    final attempts = existing is List
+        ? List<dynamic>.from(existing)
+        : <dynamic>[];
+    attempts.add({
+      'at': DateTime.now().millisecondsSinceEpoch,
+      'similarityPercent': result.similarityPercent,
+      'matchedWords': result.matchedWords,
+      'expectedWords': result.expectedWords,
+      'missingWords': result.missingWords,
+      'extraWords': result.extraWords,
+    });
+    if (attempts.length > 20) {
+      attempts.removeRange(0, attempts.length - 20);
+    }
+    record['attempts'] = attempts;
+    record['lastAttemptAt'] = DateTime.now().millisecondsSinceEpoch;
+    _records[_recordKey] = record;
+    await _save();
+  }
+
+  Future<void> _assistantDiscuss(
+    String userMessage, {
+    required String followUp,
+  }) async {
+    const systemPrompt = '''
+أنت المساعد الصوتي المحلي لتطبيق قلم مسلم. تخاطب المستخدم باحترام وتناديه عند الحاجة: المهندس أحمد محمد.
+تحدث بالعربية الواضحة وبأسلوب إنساني هادئ، واستمع إلى سياق الحوار ولا تكرر التحية في كل رد.
+مهم جدًا:
+- لا تخترع آيات قرآنية ولا تكتب نصًا قرآنيًا من ذاكرتك. مصدر نص الآية هو المصحف المدمج في التطبيق فقط.
+- لا تحكم على صحة التلاوة أو التجويد أو المخارج؛ نتيجة التعرف الصوتي تقريبية وقد يخطئ الهاتف.
+- لا تصدر فتاوى. عند السؤال الشرعي وجّه المستخدم إلى مصدر موثوق أو عالم مؤهل.
+- دورك المساندة في الحفظ، التشجيع، تنظيم المراجعة، والإجابة العامة المختصرة.
+''';
+    _assistantHistory.add({'role': 'user', 'content': userMessage});
+    if (_assistantHistory.length > 10) {
+      _assistantHistory.removeRange(0, _assistantHistory.length - 10);
+    }
+
+    final messages = <Map<String, String>>[
+      {
+        'role': 'system',
+        'content': '$systemPrompt\n\nحالة الجلسة: $followUp',
+      },
+      ..._assistantHistory,
+    ];
+    final response = StringBuffer();
+    try {
+      await for (final token in _localAssistant.generateReply(messages)) {
+        response.write(token);
+      }
+    } catch (_) {
+      response.write(
+        'أفهم ما تقوله، لكن تعذّر عليّ توليد رد الآن. يمكننا متابعة التسميع أو إعادة المحاولة.',
+      );
+    }
+
+    var reply = response
+        .toString()
+        .replaceAll(RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false), '')
+        .trim();
+    if (reply.isEmpty) {
+      reply = 'أنا معك. هل نتابع الحفظ أم تريد أن نتحدث قليلًا عن خطتك؟';
+    }
+    _assistantHistory.add({'role': 'assistant', 'content': reply});
+    if (_assistantHistory.length > 10) {
+      _assistantHistory.removeRange(0, _assistantHistory.length - 10);
+    }
+    await _assistantSpeakAndListen(reply);
+  }
+
+  Future<void> _stopVoiceAssistant() async {
+    _assistantConversationActive = false;
+    _assistantPhase = _AssistantPhase.idle;
+    _assistantListening = false;
+    await _speech.stop();
+    await _tts.stop();
+    if (!mounted) return;
+    setState(() {
+      _listening = false;
+      _status = 'انتهت جلسة المساعد الصوتي.';
+    });
+    _toast('انتهت جلسة المساعد الصوتي. النموذج ما زال محمّلًا حتى تغلق الشاشة.');
+  }
+
+  Widget _voiceAssistantCard(ThemeData theme) {
+    final scheme = theme.colorScheme;
+    final progress = _assistantBusy && _assistantDownloadProgress > 0
+        ? _assistantDownloadProgress
+        : null;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: scheme.primaryContainer,
+                  child: Icon(Icons.forum_rounded, color: scheme.primary),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'المساعد الصوتي الذكي',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        'حوار عربي محلي · لا يحتاج مفتاح API',
+                        style: TextStyle(fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_assistantReady)
+                  Icon(Icons.check_circle, color: scheme.primary),
+              ],
+            ),
+            const SizedBox(height: 9),
+            Text(
+              _assistantModelStatus,
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textTheme.bodyMedium?.color,
+              ),
+            ),
+            if (_assistantBusy) ...[
+              const SizedBox(height: 8),
+              LinearProgressIndicator(value: progress),
+            ],
+            const SizedBox(height: 10),
+            if (_assistantConversationActive)
+              OutlinedButton.icon(
+                onPressed: _stopVoiceAssistant,
+                icon: const Icon(Icons.stop_circle_outlined),
+                label: const Text('إنهاء الحوار'),
+              )
+            else
+              FilledButton.icon(
+                onPressed: _assistantBusy ? null : _prepareVoiceAssistant,
+                icon: Icon(
+                  _assistantBusy
+                      ? Icons.downloading_rounded
+                      : Icons.mic_rounded,
+                ),
+                label: Text(
+                  _assistantBusy
+                      ? 'جارٍ تجهيز المساعد...'
+                      : (_assistantReady
+                          ? 'ابدأ الحوار الصوتي'
+                          : 'تنزيل وتجهيز المساعد'),
+                ),
+              ),
+            if (_assistantTranscript.isNotEmpty) ...[
+              const Divider(height: 22),
+              ..._assistantTranscript.map((line) {
+                final isAssistant = line['role'] == 'assistant';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 7),
+                  child: Align(
+                    alignment: isAssistant
+                        ? AlignmentDirectional.centerStart
+                        : AlignmentDirectional.centerEnd,
+                    child: Container(
+                      constraints: const BoxConstraints(maxWidth: 310),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 11,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isAssistant
+                            ? scheme.surfaceContainerHighest
+                            : scheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        line['content'] ?? '',
+                        textAlign: TextAlign.start,
+                        style: const TextStyle(fontSize: 12, height: 1.45),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -281,6 +807,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             if (_commandMode) {
               _commandMode = false;
               unawaited(_handleVoiceCommand(event.recognizedWords));
+            } else if (_assistantConversationActive &&
+                _assistantPhase == _AssistantPhase.reciting) {
+              unawaited(_finishAssistantRecitation(event.recognizedWords));
             } else {
               _compare();
             }
@@ -391,6 +920,11 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   Future<void> _stop() async {
     await _speech.stop();
+    if (_assistantConversationActive &&
+        _assistantPhase == _AssistantPhase.reciting) {
+      await _finishAssistantRecitation(_recognized);
+      return;
+    }
     if (mounted) setState(() {
       _listening = false;
       _compare();
@@ -457,6 +991,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     final stage = (oldStage + 1).clamp(0, days.length - 1).toInt();
     final now = DateTime.now();
     _records[_recordKey] = {
+      ..._record(_recordKey),
       'status': 'memorized',
       'stage': stage,
       'lastReviewedAt': now.millisecondsSinceEpoch,
@@ -472,6 +1007,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (_ayah == null) return;
     final now = DateTime.now();
     _records[_recordKey] = {
+      ..._record(_recordKey),
       'status': 'review',
       'stage': 0,
       'lastReviewedAt': now.millisecondsSinceEpoch,
@@ -549,6 +1085,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _speech.cancel();
     _tts.stop();
     _player.dispose();
+    unawaited(_localAssistant.dispose());
     super.dispose();
   }
 
@@ -582,6 +1119,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        _voiceAssistantCard(theme),
+        const SizedBox(height: 10),
         Card(
           child: ListTile(
             leading: CircleAvatar(
