@@ -56,7 +56,7 @@ class QuranVoiceIntent {
     final phrase = normalize(spokenText);
     final words = phrase.split(' ').where((word) => word.isNotEmpty).toSet();
 
-    if (words.any(const {'قف', 'وقف', 'اقف', 'توقف', 'ايقاف', 'انهاء', 'انهي', 'استنى', 'انتظر'}.contains) ||
+    if (words.any(const {'قف', 'وقف', 'اقف', 'توقف', 'ايقاف', 'انهاء', 'انهي', 'استنى', 'استني', 'انتظر', 'تمهل'}.contains) ||
         phrase.contains('انهاء الجلسه') ||
         phrase.contains('انهي الجلسه') ||
         phrase.contains('اقفل المساعد') ||

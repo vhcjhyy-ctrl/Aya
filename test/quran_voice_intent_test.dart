@@ -31,6 +31,14 @@ void main() {
         QuranVoiceCommand.stop,
       );
       expect(
+        QuranVoiceIntent.parseCommand('استني'),
+        QuranVoiceCommand.stop,
+      );
+      expect(
+        QuranVoiceIntent.parseCommand('تمهل'),
+        QuranVoiceCommand.stop,
+      );
+      expect(
         QuranVoiceIntent.parseCommand('كرر الآية'),
         QuranVoiceCommand.repeat,
       );
