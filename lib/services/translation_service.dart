@@ -10,7 +10,7 @@ class TranslationService {
 
   static final Map<String, Map<String, String>> _keys = {
     'en': {
-      'app_title': 'Aya',
+      'app_title': 'Qalam Muslim',
       'home': 'Home',
       'quran': 'Quran',
       'prayer': 'Prayer',
@@ -200,7 +200,7 @@ class TranslationService {
       'speed_ultra': 'Ultra',
       'quran_downloads': 'Quran Downloads',
       'quran_downloads_sub': 'Download Surahs to listen offline',
-      'welcome_app_name': 'AYA',
+      'welcome_app_name': 'QALAM MUSLIM',
       'welcome_spiritual_companion': 'Your Spiritual & Worship Companion',
       'welcome_intro_desc':
           'Ultra-accurate prayer times, audio recitations, Qibla compass, and daily dhikr in a premium design supporting light and dark modes.',
@@ -260,7 +260,7 @@ class TranslationService {
       'islamic_fiqh': 'Islamic Fiqh',
     },
     'ar': {
-      'app_title': 'آية',
+      'app_title': 'قلم مسلم',
       'home': 'الرئيسية',
       'quran': 'القرآن',
       'prayer': 'الصلاة',
@@ -447,7 +447,7 @@ class TranslationService {
       'speed_ultra': 'فائق',
       'quran_downloads': 'إدارة التحميلات',
       'quran_downloads_sub': 'تحميل سور القرآن للاستماع بدون إنترنت',
-      'welcome_app_name': 'آيَة',
+      'welcome_app_name': 'قلم مسلم',
       'welcome_spiritual_companion': 'رفيقك الروحي والعبادي',
       'welcome_intro_desc':
           'أوقات صلاة دقيقة للغاية، وتلاوات صوتية عطرة، وتحديد اتجاه القبلة، والأذكار اليومية في تصميم فاخر يدعم الوضعين الداكن والفاتح.',
