@@ -15,7 +15,7 @@ class AboutScreen extends StatelessWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          isArabic ? "حول التطبيق" : "About Aya",
+          isArabic ? "حول قلم مسلم" : "About Qalam Muslim",
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.appBarTheme.backgroundColor,
@@ -37,7 +37,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              isArabic ? "تطبيق آية" : "Aya App",
+              isArabic ? "قلم مسلم" : "Qalam Muslim",
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -126,6 +126,22 @@ class AboutScreen extends StatelessWidget {
                   children: [
                     ListTile(
                       leading: CircleAvatar(
+                        backgroundColor: const Color(0xFFE5C158).withValues(alpha: 0.18),
+                        child: const Icon(Icons.engineering, color: Color(0xFFE5C158)),
+                      ),
+                      title: const Text(
+                        "المهندس أحمد محمد الزبلاوي",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        isArabic
+                            ? "تطوير وإضافات نسخة قلم مسلم"
+                            : "Development and enhancements for Qalam Muslim",
+                      ),
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: CircleAvatar(
                         backgroundColor: theme.primaryColor.withValues(alpha: 0.2),
                         child: Icon(Icons.person, color: theme.primaryColor),
                       ),
@@ -135,8 +151,8 @@ class AboutScreen extends StatelessWidget {
                       ),
                       subtitle: Text(
                         isArabic
-                            ? "مطور تطبيق آية — صُنع بكل حب لخدمة الإسلام"
-                            : "Developer of Aya — made with love to serve Islam",
+                            ? "المطور الأصلي لتطبيق آية — صُنع بكل حب لخدمة الإسلام"
+                            : "Original developer of Aya — made with love to serve Islam",
                       ),
                     ),
                     const Divider(),
