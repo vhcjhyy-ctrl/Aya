@@ -489,7 +489,6 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         return;
       }
       await _assistantDiscuss(
-        input,
         followUp: 'بعد ردك، اسأل المهندس أحمد محمد مرة أخرى عن اسم السورة التي يريد تسميعها.',
       );
       return;
@@ -506,7 +505,6 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         return;
       }
       await _assistantDiscuss(
-        input,
         followUp: 'أجب عن سؤاله أو حديثه بإيجاز وبأسلوب مشجع، ثم اسأله هل يبدأ التسميع من أول آية أم يختار سورة أخرى.',
       );
       return;
@@ -566,7 +564,6 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         case QuranVoiceCommand.stop:
         case QuranVoiceCommand.unknown:
           await _assistantDiscuss(
-            input,
             followUp: 'أجب بإيجاز عن كلامه دون اختراع آيات أو إصدار فتوى، ثم اسأله هل يريد إعادة الآية أو إظهارها أو الانتقال إلى التالية.',
           );
           return;
@@ -730,8 +727,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     await _save();
   }
 
-  Future<void> _assistantDiscuss(
-    String userMessage, {
+  Future<void> _assistantDiscuss({
     required String followUp,
   }) async {
     const systemPrompt = '''
@@ -768,10 +764,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (reply.isEmpty) {
       reply = 'أنا معك. هل نتابع الحفظ أم تريد أن نتحدث قليلًا عن خطتك؟';
     }
-    await _assistantSpeakAndListen(
-      reply,
-      rememberInModelHistory: false,
-    );
+    await _assistantSpeakAndListen(reply);
   }
 
   Future<void> _stopVoiceAssistant() async {
