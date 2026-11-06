@@ -12,6 +12,7 @@ import '../models/quran_models.dart';
 import '../services/api_service.dart';
 import '../services/storage_service.dart';
 import '../services/quran_recitation_matcher.dart';
+import '../services/reciters_cache_service.dart';
 
 class SheikhAhmedScreen extends StatefulWidget {
   final StorageService storage;
@@ -45,7 +46,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   bool _repeatReference = false;
   bool _blindRecallMode = false;
   bool _commandMode = false;
-  String _selectedReciter = 'ar.alafasy';
+  String _selectedReciter = '';
+  List<Map<String, dynamic>> _referenceReciters = [];
+  bool _loadingReferenceReciters = false;
 
   Ayah? get _ayah => _ayahs.isEmpty ? null : _ayahs[_index];
   String get _recordKey => _surah.toString() + ':' + (_ayah?.numberInSurah.toString() ?? '0');
@@ -57,14 +60,72 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _surah = widget.storage.getInt('sheikh_selected_surah', defaultValue: 1);
     _dailyTarget = widget.storage.getInt('hifz_daily_target', defaultValue: 5);
     _repeatReference = widget.storage.getBool('hifz_repeat_reference', defaultValue: false);
-    final savedReciter = widget.storage.getString('default_reciter', defaultValue: 'ar.alafasy');
-    _selectedReciter = availableReciters.any((reciter) => reciter.id == savedReciter)
-        ? savedReciter
-        : 'ar.alafasy';
+    _selectedReciter = widget.storage.getString(
+      'hifz_reference_reciter',
+      defaultValue: '',
+    );
     _loadRecords();
     _loadSurah(_surah);
+    _loadReferenceReciters();
     _initSpeech();
     _initTts();
+  }
+
+  Future<void> _loadReferenceReciters() async {
+    if (mounted) setState(() => _loadingReferenceReciters = true);
+    try {
+      final reciters = await RecitersCacheService.getRecitersForRiwayah(1);
+      final sources = <Map<String, dynamic>>[];
+      for (final reciter in reciters) {
+        final moshafs = reciter['moshaf'] as List? ?? const [];
+        for (final rawMoshaf in moshafs) {
+          if (rawMoshaf is! Map) continue;
+          final moshaf = Map<String, dynamic>.from(rawMoshaf);
+          final server = (moshaf['server'] ?? '').toString().trim();
+          if (!server.startsWith('https://')) continue;
+          sources.add({
+            'name': (reciter['name'] ?? '').toString(),
+            'moshaf_name': (moshaf['name'] ?? '').toString(),
+            'server': server,
+          });
+        }
+      }
+
+      sources.sort((a, b) {
+        final nameCompare = (a['name'] as String).compareTo(b['name'] as String);
+        if (nameCompare != 0) return nameCompare;
+        return (a['moshaf_name'] as String).compareTo(
+          b['moshaf_name'] as String,
+        );
+      });
+
+      final savedServer = widget.storage.getString(
+        'hifz_reference_reciter',
+        defaultValue: '',
+      );
+      final servers = sources.map((source) => source['server'] as String).toSet();
+      final selected = servers.contains(savedServer)
+          ? savedServer
+          : (sources.isNotEmpty ? sources.first['server'] as String : '');
+
+      if (selected.isNotEmpty && selected != savedServer) {
+        await widget.storage.setString('hifz_reference_reciter', selected);
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _referenceReciters = sources;
+        _selectedReciter = selected;
+        _loadingReferenceReciters = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _referenceReciters = [];
+        _loadingReferenceReciters = false;
+        _status = 'تعذّر تحميل مصادر التلاوة. تحقق من الاتصال ثم أعد فتح الشاشة.';
+      });
+    }
   }
 
   Future<void> _loadRecords() async {
@@ -341,18 +402,24 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (current == null) return;
     await _speech.stop();
     await _tts.stop();
-    final reciter = _selectedReciter;
-    final url = ApiService.buildAyahAudioUrl(
-      current.number,
+    if (_selectedReciter.isEmpty) {
+      _toast('لم يتوفر قارئ مرجعي بعد. تحقق من الاتصال ثم أعد المحاولة.');
+      return;
+    }
+    final url = ApiService.buildSurahAudioUrl(
       _surah,
-      current.numberInSurah,
-      reciter: reciter,
+      reciter: 'mp3quran_server_$_selectedReciter',
     );
+    if (url.isEmpty) {
+      _toast('رابط التلاوة غير متاح لهذا المصدر.');
+      return;
+    }
     try {
       await _player.setReleaseMode(
         _repeatReference ? ReleaseMode.loop : ReleaseMode.stop,
       );
       await _player.play(UrlSource(url));
+      _toast('بدأ تشغيل السورة كاملة من مصدر القارئ المرجعي.');
     } catch (_) {
       _toast('تعذّر تشغيل التلاوة المرجعية. تحقق من اتصال الإنترنت.');
     }
@@ -544,24 +611,39 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           },
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<String>(
-          value: _selectedReciter,
-          isExpanded: true,
-          decoration: const InputDecoration(
-            labelText: 'اختر القارئ المرجعي',
-            prefixIcon: Icon(Icons.record_voice_over_outlined),
+        if (_loadingReferenceReciters)
+          const LinearProgressIndicator(minHeight: 2)
+        else if (_referenceReciters.isEmpty)
+          OutlinedButton.icon(
+            onPressed: _loadReferenceReciters,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('تعذّر تحميل القراء — أعد المحاولة'),
+          )
+        else
+          DropdownButtonFormField<String>(
+            value: _selectedReciter,
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'اختر القارئ المرجعي',
+              helperText: 'مصادر تلاوة حقيقية من MP3Quran',
+              prefixIcon: Icon(Icons.record_voice_over_outlined),
+            ),
+            items: _referenceReciters.map((source) {
+              final name = (source['name'] ?? '').toString();
+              final moshaf = (source['moshaf_name'] ?? '').toString();
+              final label = moshaf.isEmpty ? name : '$name · $moshaf';
+              return DropdownMenuItem<String>(
+                value: source['server'] as String,
+                child: Text(label, overflow: TextOverflow.ellipsis),
+              );
+            }).toList(),
+            onChanged: (value) async {
+              if (value == null) return;
+              await _player.stop();
+              setState(() => _selectedReciter = value);
+              await widget.storage.setString('hifz_reference_reciter', value);
+            },
           ),
-          items: availableReciters.map((reciter) => DropdownMenuItem<String>(
-            value: reciter.id,
-            child: Text(reciter.nameAr, overflow: TextOverflow.ellipsis),
-          )).toList(),
-          onChanged: (value) async {
-            if (value == null) return;
-            await _player.stop();
-            setState(() => _selectedReciter = value);
-            await widget.storage.setString('default_reciter', value);
-          },
-        ),
         const SizedBox(height: 12),
         if (_loading)
           const Center(child: Padding(
