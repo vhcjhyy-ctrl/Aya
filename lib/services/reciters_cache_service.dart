@@ -30,10 +30,84 @@ class RecitersCacheService {
   /// Return reciters whose moshaf list includes entries matching [riwayahId],
   /// loading from disk cache or network on first call.
   /// Results are deduplicated by reciter name.
+  static final Map<int, List<Map<String, dynamic>>> _riwayahCache = {};
+
   static Future<List<Map<String, dynamic>>> getRecitersForRiwayah(
     int riwayahId,
   ) async {
-    return filterRecitersForRiwayah(await _ensureLoaded(), riwayahId);
+    final cached = _riwayahCache[riwayahId];
+    if (cached != null) {
+      return List<Map<String, dynamic>>.from(cached);
+    }
+
+    loadingNotifier.value = true;
+    final client = http.Client();
+    try {
+      final lang = TranslationService.isArabic ? 'ar' : 'eng';
+      final uri = Uri.parse(
+        'https://mp3quran.net/api/v3/reciters?language=$lang&rewaya=$riwayahId',
+      );
+      final response = await client.get(uri).timeout(
+        const Duration(seconds: 15),
+      );
+      if (response.statusCode != 200) {
+        throw http.ClientException(
+          'MP3Quran returned HTTP ${response.statusCode}',
+          uri,
+        );
+      }
+
+      final payload = jsonDecode(utf8.decode(response.bodyBytes))
+          as Map<String, dynamic>;
+      final source = (payload['reciters'] as List?) ?? const [];
+      final grouped = <String, Map<String, dynamic>>{};
+
+      for (final rawReciter in source) {
+        final reciter = Map<String, dynamic>.from(rawReciter as Map);
+        final name = (reciter['name'] ?? '').toString().trim();
+        if (name.isEmpty) continue;
+
+        final rawMoshaf = reciter['moshaf'] as List? ?? const [];
+        final matchingMoshaf = <Map<String, dynamic>>[];
+        for (final rawEntry in rawMoshaf) {
+          final entry = Map<String, dynamic>.from(rawEntry as Map);
+          final server = (entry['server'] ?? '').toString().trim();
+          if (!server.startsWith('https://')) continue;
+
+          // The API response is already filtered by the requested riwayah.
+          // Add the missing discriminator so local filtering/cache stays exact.
+          entry['rewaya_id'] = riwayahId;
+          matchingMoshaf.add(entry);
+        }
+        if (matchingMoshaf.isEmpty) continue;
+
+        final key = (reciter['id'] ?? name).toString();
+        final target = grouped.putIfAbsent(
+          key,
+          () => {
+            'id': reciter['id'],
+            'name': name,
+            'moshaf': <Map<String, dynamic>>[],
+          },
+        );
+        final existing = target['moshaf'] as List<Map<String, dynamic>>;
+        final knownServers = existing
+            .map((entry) => entry['server']?.toString() ?? '')
+            .toSet();
+        for (final entry in matchingMoshaf) {
+          final server = entry['server']?.toString() ?? '';
+          if (knownServers.add(server)) existing.add(entry);
+        }
+      }
+
+      final result = grouped.values.toList()
+        ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+      _riwayahCache[riwayahId] = result;
+      return List<Map<String, dynamic>>.from(result);
+    } finally {
+      client.close();
+      loadingNotifier.value = false;
+    }
   }
 
   /// Filter a riwayah before deduplicating names so another API row
@@ -78,6 +152,7 @@ class RecitersCacheService {
   static Future<void> refresh() async {
     loadingNotifier.value = true;
     _allReciters = null;
+    _riwayahCache.clear();
     try {
       _allReciters = await _fetchAll();
       await _writeCache(_allReciters!);
@@ -110,7 +185,7 @@ class RecitersCacheService {
   }
 
   static Future<List<Map<String, dynamic>>> _fetchAll() async {
-    final lang = TranslationService.isArabic ? 'ar' : 'en';
+    final lang = TranslationService.isArabic ? 'ar' : 'eng';
     final client = http.Client();
     final all = <Map<String, dynamic>>[];
 
@@ -203,7 +278,7 @@ class RecitersCacheService {
       final decoded = jsonDecode(content) as Map<String, dynamic>;
       // Invalidate cache after 7 days or if it's from before the dedup fix
       final cacheVersion = decoded['_v'] as int? ?? 0;
-      if (cacheVersion < 3) return null;
+      if (cacheVersion < 4) return null;
       final cachedAt = decoded['_cached_at'] as int? ?? 0;
       if (DateTime.now().millisecondsSinceEpoch - cachedAt >
           const Duration(days: 7).inMilliseconds) {
@@ -220,7 +295,7 @@ class RecitersCacheService {
     try {
       final file = await _cacheFile();
       final wrapper = {
-        '_v': 3,
+        '_v': 4,
         '_cached_at': DateTime.now().millisecondsSinceEpoch,
         'reciters': reciters,
       };
