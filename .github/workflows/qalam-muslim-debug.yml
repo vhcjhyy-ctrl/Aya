@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - qalam-muslim-development
+      - qalam-muslim-enhancements
   workflow_dispatch:
 
 concurrency:
@@ -42,8 +43,8 @@ jobs:
         continue-on-error: true
         run: flutter analyze --no-pub
 
-      - name: Run Quran recitation comparison tests
-        run: flutter test --no-pub test/quran_recitation_matcher_test.dart
+      - name: Run Flutter tests
+        run: flutter test --no-pub
 
       - name: Build optimized ARM64 release
         run: |
