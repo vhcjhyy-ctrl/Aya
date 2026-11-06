@@ -66,6 +66,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   bool _assistantConversationActive = false;
   bool _assistantListening = false;
   bool _assistantResultProcessing = false;
+  bool _assistantFinalResultHandled = true;
+  bool _assistantManualRecognitionStop = false;
+  int _assistantNoSpeechRetries = 0;
   double _assistantDownloadProgress = 0;
   String _assistantModelStatus = 'مساعد محلي، بلا مفتاح API';
   _AssistantPhase _assistantPhase = _AssistantPhase.idle;
@@ -167,6 +170,15 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         onStatus: (status) {
           if (!mounted) return;
           if (status == 'notListening' || status == 'done') {
+            final dialogueTimedOut = _assistantListening &&
+                !_assistantFinalResultHandled &&
+                _assistantConversationActive &&
+                _assistantPhase != _AssistantPhase.reciting;
+            final recitationTimedOut = _assistantConversationActive &&
+                _assistantPhase == _AssistantPhase.reciting &&
+                _listening &&
+                !_assistantResultProcessing &&
+                !_assistantManualRecognitionStop;
             setState(() {
               _listening = false;
               if (_assistantListening) _assistantListening = false;
@@ -174,16 +186,41 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                 _commandMode = false;
                 _status = 'لم ألتقط أمرًا صوتيًا. اضغط زر الميكروفون وحاول مجددًا.';
               }
+              if (recitationTimedOut) {
+                _assistantPhase = _AssistantPhase.awaitingFeedback;
+                _assistantResultProcessing = true;
+                _status = 'لم يلتقط الهاتف تلاوة واضحة. أعد المحاولة.';
+              }
               // Final speech results are compared in onResult only.
               // Comparing here can accidentally treat a voice command as Quran recitation.
             });
+            if (dialogueTimedOut) {
+              _assistantFinalResultHandled = true;
+              if (_assistantNoSpeechRetries < 2) {
+                _assistantNoSpeechRetries++;
+                unawaited(_assistantSpeakAndListen(
+                  'لم أسمع إجابتك بوضوح. خذ وقتك وتحدث مرة أخرى.',
+                ));
+              } else {
+                _assistantNoSpeechRetries = 0;
+                _status = 'لم أسمع إجابة. اضغط ابدأ الحوار الصوتي للمحاولة مجددًا.';
+                if (mounted) setState(() {});
+              }
+            }
+            if (recitationTimedOut) {
+              unawaited(_assistantSpeakAndListen(
+                'لم ألتقط تلاوة واضحة في هذه المحاولة. قد تكون خدمة التعرف الصوتي توقفت أو لم تسمع الكلمات. هل تعيد المحاولة؟ قل كرر.',
+              ));
+            }
           } else if (status == 'listening') {
             setState(() => _listening = true);
           }
         },
         onError: (_) {
+          _assistantFinalResultHandled = true;
           if (mounted) setState(() {
             _listening = false;
+            _assistantListening = false;
             _status = 'تعذّر التعرف على الصوت. تحقق من إذن الميكروفون وخدمة التعرف العربية.';
           });
         },
@@ -318,6 +355,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   Future<void> _startVoiceAssistant() async {
     _assistantHistory.clear();
     _assistantTranscript.clear();
+    _assistantNoSpeechRetries = 0;
+    _assistantFinalResultHandled = true;
     _assistantConversationActive = true;
     _assistantPhase = _AssistantPhase.askingWhatMemorized;
     await _assistantSpeakAndListen(
@@ -356,7 +395,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (!_assistantConversationActive || !_speechReady) return;
     try {
       await _speech.stop();
-      if (!mounted) return;
+      if (!mounted || !_assistantConversationActive) return;
+      _assistantFinalResultHandled = false;
       setState(() {
         _assistantListening = true;
         _listening = true;
@@ -369,7 +409,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         onResult: (event) {
           if (!mounted) return;
           setState(() => _recognized = event.recognizedWords);
-          if (event.finalResult) {
+          if (event.finalResult && !_assistantFinalResultHandled) {
+            _assistantFinalResultHandled = true;
+            _assistantNoSpeechRetries = 0;
             setState(() {
               _assistantListening = false;
               _listening = false;
@@ -450,10 +492,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           return;
         case QuranVoiceCommand.next:
           if (_index >= _ayahs.length - 1) {
-            await _assistantSpeakAndListen(
-              'وصلنا إلى آخر آية في السورة. أحسنت في إكمال الجلسة. هل تريد اختيار سورة أخرى؟',
-            );
             _assistantPhase = _AssistantPhase.askingWhatMemorized;
+            await _assistantSpeakAndListen(
+              'وصلنا إلى آخر آية في السورة. أحسنت في إكمال الجلسة. ما السورة التي تريد مراجعتها بعد ذلك؟',
+            );
             return;
           }
           await _move(1);
@@ -514,6 +556,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     setState(() {
       _assistantPhase = _AssistantPhase.reciting;
       _assistantResultProcessing = false;
+      _assistantManualRecognitionStop = false;
       _recognized = '';
       _result = null;
       _showText = false;
@@ -528,6 +571,18 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       return;
     }
     _assistantResultProcessing = true;
+    _assistantManualRecognitionStop = false;
+    if (recognizedText.trim().isEmpty) {
+      setState(() {
+        _assistantPhase = _AssistantPhase.awaitingFeedback;
+        _status = 'لم يلتقط الهاتف كلامًا واضحًا. أعد المحاولة.';
+      });
+      _assistantResultProcessing = false;
+      await _assistantSpeakAndListen(
+        'لم ألتقط تلاوة واضحة، وهذا لا يعني أنك أخطأت. تأكد من قرب الهاتف ثم قل كرر لإعادة المحاولة.',
+      );
+      return;
+    }
     final normalizedCommand = QuranVoiceIntent.parseCommand(recognizedText);
     if (normalizedCommand == QuranVoiceCommand.stop) {
       _assistantResultProcessing = false;
@@ -552,11 +607,25 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     final missing = result.missingWords.take(5).join('، ');
     final extra = result.extraWords.take(5).join('، ');
     String feedback;
-    if (result.missingWords.isEmpty && result.extraWords.isEmpty) {
+    if (result.missingWords.isEmpty && result.extraWords.isEmpty &&
+        result.outOfOrderWords.isEmpty) {
       feedback =
           'أحسنت. التقط الهاتف كلمات الآية كاملة في هذه المحاولة. '
           'هذا فحص لفظي آلي فقط، وليس تقييمًا للتجويد أو المخارج. '
           'هل ننتقل إلى الآية التالية أم تعيدها؟';
+    } else if (result.missingWords.isEmpty &&
+        result.extraWords.isEmpty &&
+        result.outOfOrderWords.isNotEmpty) {
+      final positions = result.outOfOrderWords
+          .take(4)
+          .map(
+            (issue) =>
+                'موضع ${issue.position}: التقط الهاتف «${issue.recognizedWord}» بدل «${issue.expectedWord}»',
+          )
+          .join('، ');
+      feedback =
+          'الكلمات التي التقطها الهاتف موجودة، لكن ترتيب بعضها مختلف ويحتاج مراجعة: $positions. '
+          'قد يكون هذا من خطأ التعرف الصوتي. هل تريد إظهار الآية أم إعادة المحاولة؟';
     } else {
       final details = <String>[];
       if (missing.isNotEmpty) details.add('كلمات لم يلتقطها الهاتف: $missing');
@@ -583,6 +652,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       'expectedWords': result.expectedWords,
       'missingWords': result.missingWords,
       'extraWords': result.extraWords,
+      'outOfOrderWords': result.outOfOrderWords.map((issue) => issue.toJson()).toList(),
     });
     if (attempts.length > 20) {
       attempts.removeRange(0, attempts.length - 20);
@@ -647,6 +717,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _assistantConversationActive = false;
     _assistantPhase = _AssistantPhase.idle;
     _assistantListening = false;
+    _assistantFinalResultHandled = true;
+    _assistantNoSpeechRetries = 0;
     await _speech.stop();
     await _tts.stop();
     if (!mounted) return;
@@ -944,6 +1016,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _stop() async {
+    if (_assistantConversationActive &&
+        _assistantPhase == _AssistantPhase.reciting) {
+      _assistantManualRecognitionStop = true;
+    }
     await _speech.stop();
     if (_assistantConversationActive &&
         _assistantPhase == _AssistantPhase.reciting) {
@@ -1109,8 +1185,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _tabs.dispose();
     _assistantConversationActive = false;
     _assistantListening = false;
+    _assistantFinalResultHandled = true;
     unawaited(_localAssistant.cancelDownload());
-    unawaited(_localAssistant.stop());
     _speech.cancel();
     _tts.stop();
     _player.dispose();
@@ -1333,6 +1409,22 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                       const SizedBox(height: 7),
                       Text('كلمات إضافية في النص المتعرف عليه:', style: TextStyle(color: scheme.tertiary, fontWeight: FontWeight.bold)),
                       Text(_result!.extraWords.join(' • '), style: TextStyle(color: scheme.tertiary, fontSize: 16)),
+                    ],
+                    if (_result!.outOfOrderWords.isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      Text(
+                        'كلمات التقطها الهاتف بترتيب مختلف:',
+                        style: TextStyle(
+                          color: scheme.tertiary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      ..._result!.outOfOrderWords.take(4).map(
+                        (issue) => Text(
+                          'الموضع ${issue.position}: «${issue.recognizedWord}» بدل «${issue.expectedWord}»',
+                          style: TextStyle(color: scheme.tertiary, fontSize: 14),
+                        ),
+                      ),
                     ],
                     const SizedBox(height: 10),
                     Wrap(

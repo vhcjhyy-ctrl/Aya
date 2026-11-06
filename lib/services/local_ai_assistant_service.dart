@@ -17,6 +17,7 @@ class LocalAiAssistantService {
 
   final LlamaController _controller = LlamaController();
   bool _loaded = false;
+  bool _disposed = false;
   String? _loadedPath;
   bool _cancelDownloadRequested = false;
   HttpClient? _downloadClient;
@@ -150,6 +151,7 @@ class LocalAiAssistantService {
   }
 
   Future<void> loadModel() async {
+    if (_disposed) throw StateError('تم إغلاق محرك المساعد. أعد فتح شاشة التسميع.');
     final path = await _modelPath();
     if (_loaded && _loadedPath == path) return;
     if (_loaded) await unload();
@@ -189,7 +191,8 @@ class LocalAiAssistantService {
   Future<void> stop() => _controller.stop();
 
   Future<void> unload() async {
-    if (!_loaded) return;
+    if (_disposed) return;
+    _disposed = true;
     await _controller.dispose();
     _loaded = false;
     _loadedPath = null;
