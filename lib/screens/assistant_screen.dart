@@ -188,12 +188,25 @@ class _AssistantScreenState extends State<AssistantScreen> {
     return matches.take(3).toList();
   }
 
-  Future<void> _ensureHadithBooks(DatabaseService database, String lang) async {
+  Future<void> _ensureHadithBooks(
+    DatabaseService database,
+    String lang, {
+    void Function(String message)? onProgress,
+  }) async {
     Future<void> seed() async {
       for (final bookId in _coreHadithBooks) {
         if (await database.hadith.isHadithBookDownloaded(bookId, lang)) {
           continue;
         }
+
+        final bookName = lang == 'ara'
+            ? (_bookNames[bookId] ?? bookId)
+            : (_bookNamesEnglish[bookId] ?? bookId);
+        onProgress?.call(
+          lang == 'ara'
+              ? 'إعداد فهرس $bookName...'
+              : 'Indexing $bookName...',
+        );
 
         try {
           final json = await rootBundle.loadString(
@@ -202,7 +215,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
           final hadiths = await HadithDatabaseService.parseHadithJson(json);
           await database.hadith.insertHadithBook(bookId, lang, hadiths);
         } catch (_) {
-          // A book that cannot be loaded is omitted; no unverified content is generated.
+          // A missing or damaged collection is skipped; no replacement narration is invented.
         }
       }
     }
@@ -233,7 +246,13 @@ class _AssistantScreenState extends State<AssistantScreen> {
     try {
       final database = await DatabaseService.getInstance();
       final lang = TranslationService.isArabic ? 'ara' : 'eng';
-      await _ensureHadithBooks(database, lang);
+      await _ensureHadithBooks(
+        database,
+        lang,
+        onProgress: (message) {
+          if (mounted) setState(() => _status = message);
+        },
+      );
 
       final keywords = _keywords(question);
       final searchTerms = keywords.isEmpty ? <String>[question] : keywords;
