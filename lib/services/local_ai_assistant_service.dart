@@ -18,12 +18,14 @@ class LocalAiAssistantService {
   final LlamaController _controller = LlamaController();
   bool _loaded = false;
   bool _disposed = false;
+  bool _gpuAccelerationEnabled = false;
   String? _loadedPath;
   bool _cancelDownloadRequested = false;
   HttpClient? _downloadClient;
   HttpClientRequest? _activeRequest;
 
   bool get isLoaded => _loaded;
+  bool get gpuAccelerationEnabled => _gpuAccelerationEnabled;
 
   Future<String> _modelPath() async {
     final directory = await getApplicationSupportDirectory();
@@ -161,10 +163,35 @@ class LocalAiAssistantService {
     }
 
     // A short context is intentional to reduce RAM pressure on older phones.
-    await _controller.loadModel(
-      modelPath: path,
-      contextSize: 1024,
-    );
+    // Use Vulkan only when the device reports a supported configuration;
+    // if native GPU initialization fails, retry once on CPU.
+    var recommendedGpuLayers = 0;
+    try {
+      final gpuInfo = await _controller.detectGpu();
+      recommendedGpuLayers = gpuInfo.recommendedGpuLayers;
+    } catch (_) {
+      recommendedGpuLayers = 0;
+    }
+
+    try {
+      await _controller.loadModel(
+        modelPath: path,
+        threads: 4,
+        contextSize: 1024,
+        gpuLayers: recommendedGpuLayers,
+      );
+      _gpuAccelerationEnabled = recommendedGpuLayers > 0;
+    } catch (_) {
+      if (recommendedGpuLayers <= 0) rethrow;
+      await _controller.loadModel(
+        modelPath: path,
+        threads: 4,
+        contextSize: 1024,
+        gpuLayers: 0,
+      );
+      _gpuAccelerationEnabled = false;
+    }
+
     _loaded = true;
     _loadedPath = path;
   }
@@ -195,6 +222,7 @@ class LocalAiAssistantService {
     _disposed = true;
     await _controller.dispose();
     _loaded = false;
+    _gpuAccelerationEnabled = false;
     _loadedPath = null;
   }
 
