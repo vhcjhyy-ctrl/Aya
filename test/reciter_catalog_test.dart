@@ -34,6 +34,18 @@ void main() {
       255,
       reciter: 'ar.abdulsamad',
     );
+    final ajamy = ApiService.buildAyahAudioUrl(
+      1,
+      1,
+      1,
+      reciter: 'ar.ahmedajamy',
+    );
+    final ghamdi = ApiService.buildAyahAudioUrl(
+      1,
+      1,
+      1,
+      reciter: 'ar.saadalghamidi',
+    );
     final shuraim = ApiService.buildSurahAudioUrl(
       2,
       reciter: 'ar.saoodshuraym',
@@ -42,6 +54,8 @@ void main() {
     expect(sudais, contains('/ar.sudais/262.mp3'));
     expect(abdulbasit, contains('/ar.abdulbasit/262.mp3'));
     expect(shuraim, contains('/ar.shuraim/2.mp3'));
+    expect(ajamy, contains('/ar.ajamy/1.mp3'));
+    expect(ghamdi, contains('/ar.saadalghamdi/1.mp3'));
 
     final alafasySurah = ApiService.buildSurahAudioUrl(
       18,
