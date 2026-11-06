@@ -1,4 +1,4 @@
-name: Qalam Muslim Android Debug APK
+name: Qalam Muslim Optimized Release APK
 
 on:
   push:
@@ -37,13 +37,13 @@ jobs:
         continue-on-error: true
         run: flutter analyze --no-pub
 
-      - name: Build Android debug APKs
-        run: flutter build apk --flavor fdroid --debug --split-per-abi
+      - name: Build optimized Android release APKs
+        run: flutter build apk --flavor fdroid --release --split-per-abi
 
       - name: Upload APK files
         uses: actions/upload-artifact@v6
         with:
-          name: qalam-muslim-debug-apks
+          name: qalam-muslim-release-apks
           path: build/app/outputs/flutter-apk/*.apk
           if-no-files-found: error
           retention-days: 14
