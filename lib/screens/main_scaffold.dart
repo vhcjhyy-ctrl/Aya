@@ -19,6 +19,7 @@ import 'settings/settings_screen.dart';
 import 'surah_reader/surah_pager_screen.dart';
 import 'quran_download_screen.dart';
 import 'bookmarks_screen.dart';
+import 'assistant_screen.dart';
 
 class MainScaffold extends StatefulWidget {
   final StorageService storage;
@@ -348,6 +349,18 @@ class _MainScaffoldState extends State<MainScaffold>
           backgroundColor: theme.appBarTheme.backgroundColor,
           elevation: 0,
           actions: [
+            IconButton(
+              icon: const Icon(Icons.auto_awesome, color: Color(0xFFE5C158)),
+              tooltip: TranslationService.isArabic ? 'سؤالك' : 'Ask',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AssistantScreen(),
+                  ),
+                );
+              },
+            ),
             if (_currentTab == 1)
               IconButton(
                 icon: const Icon(Icons.download_for_offline),
