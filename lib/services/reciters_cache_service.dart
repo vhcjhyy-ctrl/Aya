@@ -59,55 +59,66 @@ class RecitersCacheService {
 
       final payload = jsonDecode(utf8.decode(response.bodyBytes))
           as Map<String, dynamic>;
-      final source = (payload['reciters'] as List?) ?? const [];
-      final grouped = <String, Map<String, dynamic>>{};
-
-      for (final rawReciter in source) {
-        final reciter = Map<String, dynamic>.from(rawReciter as Map);
-        final name = (reciter['name'] ?? '').toString().trim();
-        if (name.isEmpty) continue;
-
-        final rawMoshaf = reciter['moshaf'] as List? ?? const [];
-        final matchingMoshaf = <Map<String, dynamic>>[];
-        for (final rawEntry in rawMoshaf) {
-          final entry = Map<String, dynamic>.from(rawEntry as Map);
-          final server = (entry['server'] ?? '').toString().trim();
-          if (!server.startsWith('https://')) continue;
-
-          // The API response is already filtered by the requested riwayah.
-          // Add the missing discriminator so local filtering/cache stays exact.
-          entry['rewaya_id'] = riwayahId;
-          matchingMoshaf.add(entry);
-        }
-        if (matchingMoshaf.isEmpty) continue;
-
-        final key = (reciter['id'] ?? name).toString();
-        final target = grouped.putIfAbsent(
-          key,
-          () => {
-            'id': reciter['id'],
-            'name': name,
-            'moshaf': <Map<String, dynamic>>[],
-          },
-        );
-        final existing = target['moshaf'] as List<Map<String, dynamic>>;
-        final knownServers = existing
-            .map((entry) => entry['server']?.toString() ?? '')
-            .toSet();
-        for (final entry in matchingMoshaf) {
-          final server = entry['server']?.toString() ?? '';
-          if (knownServers.add(server)) existing.add(entry);
-        }
-      }
-
-      final result = grouped.values.toList()
-        ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+      final result = parseRecitersForRiwayah(payload, riwayahId);
       _riwayahCache[riwayahId] = result;
       return List<Map<String, dynamic>>.from(result);
     } finally {
       client.close();
       loadingNotifier.value = false;
     }
+  }
+
+  /// Parse the response from the MP3Quran endpoint already filtered by
+  /// `rewaya`. Its documented moshaf objects carry server and moshaf_type,
+  /// but do not consistently include rewaya_id, so attach the requested ID.
+  @visibleForTesting
+  static List<Map<String, dynamic>> parseRecitersForRiwayah(
+    Map<String, dynamic> payload,
+    int riwayahId,
+  ) {
+    final source = (payload['reciters'] as List?) ?? const [];
+    final grouped = <String, Map<String, dynamic>>{};
+
+    for (final rawReciter in source) {
+      if (rawReciter is! Map) continue;
+      final reciter = Map<String, dynamic>.from(rawReciter);
+      final name = (reciter['name'] ?? '').toString().trim();
+      if (name.isEmpty) continue;
+
+      final rawMoshaf = reciter['moshaf'] as List? ?? const [];
+      final matchingMoshaf = <Map<String, dynamic>>[];
+      for (final rawEntry in rawMoshaf) {
+        if (rawEntry is! Map) continue;
+        final entry = Map<String, dynamic>.from(rawEntry);
+        final server = (entry['server'] ?? '').toString().trim();
+        if (!server.startsWith('https://')) continue;
+        entry['rewaya_id'] = riwayahId;
+        matchingMoshaf.add(entry);
+      }
+      if (matchingMoshaf.isEmpty) continue;
+
+      final key = (reciter['id'] ?? name).toString();
+      final target = grouped.putIfAbsent(
+        key,
+        () => {
+          'id': reciter['id'],
+          'name': name,
+          'moshaf': <Map<String, dynamic>>[],
+        },
+      );
+      final existing = target['moshaf'] as List<Map<String, dynamic>>;
+      final knownServers = existing
+          .map((entry) => entry['server']?.toString() ?? '')
+          .toSet();
+      for (final entry in matchingMoshaf) {
+        final server = entry['server']?.toString() ?? '';
+        if (knownServers.add(server)) existing.add(entry);
+      }
+    }
+
+    final result = grouped.values.toList()
+      ..sort((a, b) => (a['name'] as String).compareTo(b['name'] as String));
+    return result;
   }
 
   /// Filter a riwayah before deduplicating names so another API row
