@@ -1,3 +1,26 @@
+# Qalam Muslim Development Branch\n\n## Qalam Muslim — Developer Edition
+
+This branch is a personal development edition based on the upstream [Aya Islamic Companion](https://github.com/Cancelllls/Aya) project. The upstream repository remains unchanged, and the original developer attribution is retained in the app.
+
+### Additions in this branch
+
+- Qalam Muslim branding, splash screen, and Android launcher artwork.
+- A separate Android application ID: `com.ahmed.qalammuslim`.
+- A new `سؤالك` screen that searches the bundled Quran text and six core hadith collections, then displays matching passages with their surah/book references and available grading.
+- The first assistant milestone is source retrieval, not free-form AI generation or an independent fatwa service. It does not invent a ruling when the local sources return no match.
+- A dedicated GitHub Actions workflow builds Android debug APKs for the `fdroid` flavor and uploads them as a workflow artifact.
+
+### Build this branch
+
+```bash
+flutter pub get
+flutter build apk --flavor fdroid --debug --split-per-abi
+```
+
+The Android package ID is intentionally different from the upstream Aya app so both apps can be installed side by side.
+
+---
+
 <p align="center">
   <img src="https://img.shields.io/badge/Flutter-3.x-blue?style=flat-square&logo=flutter" alt="Flutter">
   <img src="https://img.shields.io/badge/Kotlin-Native-purple?style=flat-square&logo=kotlin" alt="Kotlin">
