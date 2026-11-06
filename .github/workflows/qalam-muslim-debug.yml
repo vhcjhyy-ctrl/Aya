@@ -86,11 +86,10 @@ jobs:
             adb wait-for-device
             adb install -r dist/qalam-muslim-x86_64-release.apk
             adb shell am force-stop com.ahmed.qalammuslim
-            LAUNCH_OUTPUT="$(adb shell am start -W -n com.ahmed.qalammuslim/com.quran.aya.MainActivity 2>&1)"
-            echo "$LAUNCH_OUTPUT" | tee dist/launch-result.txt
-            echo "$LAUNCH_OUTPUT" | grep -q "Status: ok"
+            adb shell am start -n com.ahmed.qalammuslim/com.quran.aya.MainActivity > dist/launch-result.txt 2>&1 || true
+            sleep 10
             PID=""
-            for attempt in $(seq 1 30); do
+            for attempt in $(seq 1 15); do
               PID="$(adb shell pidof com.ahmed.qalammuslim 2>/dev/null | tr -d '\\r' || true)"
               if [ -n "$PID" ]; then
                 break
@@ -108,7 +107,10 @@ jobs:
             adb shell dumpsys activity activities > dist/activities-after-launch.txt
             adb exec-out screencap -p > dist/launch-screen.png
             adb logcat -d -v time -t 5000 > dist/android-launch-log.txt
-            grep -q "com.ahmed.qalammuslim" dist/activities-after-launch.txt
+            if ! grep -q "com.quran.aya.MainActivity" dist/activities-after-launch.txt; then
+              echo "Qalam Muslim MainActivity is not visible in the activity stack."
+              exit 1
+            fi
             if grep -E "FATAL EXCEPTION|Process: com.ahmed.qalammuslim" dist/android-launch-log.txt; then
               echo "A fatal application exception was recorded."
               exit 1
