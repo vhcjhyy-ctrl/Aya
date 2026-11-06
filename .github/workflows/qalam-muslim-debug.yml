@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: qalam-muslim-final-verification-${{ github.ref }}
+  group: qalam-muslim-final-verification-${{ github.ref }}-${{ github.sha }}
   cancel-in-progress: true
 
 permissions:
