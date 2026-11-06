@@ -172,11 +172,12 @@ class _SplashScreenState extends State<SplashScreen>
                   child: Column(
                     children: [
                       Text(
-                        "AYA",
-                        style: TextStyle(fontFamily: 'Outfit',
-                          fontSize: 32,
+                        TranslationService.isArabic ? "قلم مسلم" : "QALAM MUSLIM",
+                        style: TextStyle(
+                          fontFamily: 'Outfit',
+                          fontSize: 28,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 8,
+                          letterSpacing: TranslationService.isArabic ? 1 : 3,
                           color: const Color(0xFFE5C158),
                         ),
                       ),
@@ -196,6 +197,22 @@ class _SplashScreenState extends State<SplashScreen>
                                         Colors.white)
                                     .withValues(alpha: 0.3)
                               : Colors.black38,
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      Text(
+                        TranslationService.isArabic
+                            ? "برمجة وتطوير\nالمهندس أحمد محمد الزبلاوي"
+                            : "Developed by\nEngineer Ahmed Mohammed Al-Zabllawy",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 11,
+                          height: 1.6,
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.62)
+                              : Colors.black54,
                         ),
                       ),
                     ],
