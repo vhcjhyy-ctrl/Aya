@@ -6,7 +6,6 @@ import '../services/storage_service.dart';
 import '../services/translation_service.dart';
 import 'welcome_screen.dart';
 import 'main_scaffold.dart';
-import '../widgets/islamic_logo_painter.dart';
 
 class SplashScreen extends StatefulWidget {
   final StorageService storage;
@@ -156,10 +155,13 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ],
                     ),
-                    child: CustomPaint(
-                      painter: IslamicLogoPainter(
-                        animationValue: _controller.value,
-                        color: const Color(0xFFE5C158),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(36),
+                      child: Image.asset(
+                        'assets/icon.png',
+                        width: 180,
+                        height: 180,
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),
