@@ -425,6 +425,38 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     }
   }
 
+  Future<bool?> _chooseAssistantSetupMode() async {
+    return showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('اختر طريقة تشغيل المساعد'),
+        content: const Text(
+          'كلا الخيارين مجانيان تمامًا، دون API Key أو اشتراك أو رسوم لكل رسالة. '
+          'يُنزّل النموذج مرة واحدة ثم يعمل محليًا على الهاتف.\n\n'
+          'المحادثة النصية: نحو 528 ميجابايت. اكتب أسئلتك واحصل على إجابات من نموذج محلي.\n\n'
+          'المساعد الصوتي الكامل: نحو 773 ميجابايت إجمالًا، ويضيف التعرف على الكلام '
+          'والنطق العربي محليًا باستخدام Whisper وSupertonic.\n\n'
+          'يمكنك إضافة محركات الصوت لاحقًا من الشاشة نفسها.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, null),
+            child: const Text('ليس الآن'),
+          ),
+          OutlinedButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('محادثة نصية · 528 MB'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('مساعد صوتي كامل · 773 MB'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<bool> _ensureSupertonicLicenseAccepted() async {
     if (widget.storage.getBool('supertonic_openrail_m_accepted')) {
       return true;
@@ -477,10 +509,18 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (_assistantBusy) return;
     _assistantVoiceDownloadCancelled = false;
 
-    // Voice generation has a separate model licence. Declining it must not
-    // block the free local chat model or the text-only assistant.
-    final useLocalVoiceModels = _offlineVoiceReady ||
-        await _ensureSupertonicLicenseAccepted();
+    // Let the user choose a free text-only setup or the full local voice
+    // stack. The chat model is free in both modes and never uses a hosted API.
+    var useLocalVoiceModels = _offlineVoiceReady;
+    if (!_offlineVoiceReady) {
+      final selectedMode = await _chooseAssistantSetupMode();
+      if (selectedMode == null || !mounted) return;
+      useLocalVoiceModels = selectedMode;
+      if (useLocalVoiceModels) {
+        useLocalVoiceModels = await _ensureSupertonicLicenseAccepted();
+        if (!mounted) return;
+      }
+    }
     if (!mounted) return;
 
     const voiceBytes = OfflineArabicVoiceService.totalModelDownloadBytes;
