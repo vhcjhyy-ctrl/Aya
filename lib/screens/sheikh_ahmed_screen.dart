@@ -474,6 +474,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   Future<void> _prepareVoiceAssistant() async {
     if (_assistantBusy) return;
     _assistantVoiceDownloadCancelled = false;
+    const voiceBytes = OfflineArabicVoiceService.totalModelDownloadBytes;
+    const chatBytes = LocalAiAssistantService.expectedModelBytes;
+    const voiceProgressShare =
+        voiceBytes / (voiceBytes + chatBytes);
     if (!_offlineVoiceReady &&
         !await _ensureSupertonicLicenseAccepted()) {
       _toast('يجب قبول شروط استخدام نموذج الصوت قبل تنزيله.');
@@ -515,7 +519,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           onProgress: (progress, status) {
             if (!mounted) return;
             setState(() {
-              _assistantDownloadProgress = progress * 0.28;
+              _assistantDownloadProgress = progress * voiceProgressShare;
               _assistantModelStatus = status;
             });
           },
@@ -536,9 +540,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       if (!await _localAssistant.isModelDownloaded()) {
         if (mounted) {
           setState(() {
-            _assistantDownloadProgress = _offlineVoiceReady ? 0.28 : 0;
+            _assistantDownloadProgress = _offlineVoiceReady ? voiceProgressShare : 0;
             _assistantModelStatus =
-                'تنزيل نموذج الحوار المحلي — نحو 528 ميجابايت';
+                'تنزيل نموذج الحوار المحلي — نحو 528 ميجابايت؛ بلا رسوم API';
           });
         }
         await _localAssistant.downloadModel(
@@ -546,8 +550,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             if (!mounted) return;
             setState(() {
               _assistantDownloadProgress =
-                  (_offlineVoiceReady ? 0.28 : 0) + progress *
-                      (_offlineVoiceReady ? 0.72 : 1);
+                  (_offlineVoiceReady ? voiceProgressShare : 0) + progress *
+                      (_offlineVoiceReady ? 1 - voiceProgressShare : 1);
               _assistantModelStatus =
                   'تنزيل نموذج الحوار ${(progress * 100).round()}%';
             });
@@ -564,8 +568,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             ? 'GPU'
             : 'CPU';
         _assistantModelStatus = _offlineVoiceReady
-            ? 'المساعد جاهز — صوت عربي محلي · $speed'
-            : 'المساعد جاهز — $speed';
+            ? 'المساعد جاهز — مجاني، بلا API · صوت محلي · $speed'
+            : 'المساعد جاهز — مجاني، بلا API · $speed';
       });
       if (_offlineVoiceReady || _speechReady) {
         await _startVoiceAssistant();
@@ -1537,7 +1541,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        'حوار عربي محلي · دون مفتاح API',
+                        'مجاني · بلا مفتاح API أو اشتراك',
                         style: TextStyle(
                           color: scheme.onSurfaceVariant,
                           fontSize: 11,
@@ -1603,6 +1607,42 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                       color: stateColor,
                     ),
                   ],
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.primaryContainer.withValues(alpha: 0.38),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: scheme.outlineVariant.withValues(alpha: 0.8),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.lock_open_rounded,
+                    color: scheme.primary,
+                    size: 19,
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'لا توجد رسوم API أو اشتراك، ولا تُرسل المحادثة إلى خادم. '
+                      'التجهيز الأول يحتاج تنزيل نحو 773 ميجابايت: '
+                      '528 للمحادثة + 116 للتعرّف الصوتي + 129 للصوت العربي. '
+                      'بعد تنزيل النماذج تعمل المحادثة والتعرّف والنطق محليًا؛ '
+                      'الإنترنت مطلوب للتنزيل الأول والتحديثات فقط. '
+                      'قد تحتاج الملفات بعد فك الضغط إلى مساحة أكبر.',
+                      style: TextStyle(
+                        color: scheme.onSurface,
+                        fontSize: 11,
+                        height: 1.55,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
