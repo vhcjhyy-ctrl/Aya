@@ -87,7 +87,7 @@ void main() {
       final now = DateTime(2026, 11, 7, 12);
       var state = QadaaTrackerState.empty().setDailyGoal(2);
       state = state
-          .addFastDebt(2)
+          .addFastDebt(4)
           .completeFast(completedAt: DateTime(2026, 11, 5, 12))
           .completeFast(completedAt: DateTime(2026, 11, 5, 13))
           .completeFast(completedAt: DateTime(2026, 11, 6, 12))
