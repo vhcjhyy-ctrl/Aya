@@ -1197,54 +1197,311 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _toast('انتهت جلسة المساعد الصوتي. النموذج ما زال محمّلًا حتى تغلق الشاشة.');
   }
 
+  Future<void> _openVoiceAssistantSettings() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+      ),
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.tune_rounded,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'إعدادات المساعد الصوتي',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'إغلاق',
+                        onPressed: () => Navigator.pop(sheetContext),
+                        icon: const Icon(Icons.close_rounded),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      const Expanded(child: Text('سرعة النطق')),
+                      Text(
+                        '${_voiceSpeed.toStringAsFixed(2)}×',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: _voiceSpeed,
+                    min: 0.70,
+                    max: 1.30,
+                    divisions: 12,
+                    label: '${_voiceSpeed.toStringAsFixed(2)}×',
+                    onChanged: (value) {
+                      setSheetState(() => _voiceSpeed = value);
+                      setState(() => _voiceSpeed = value);
+                      unawaited(
+                        widget.storage.setDouble('sheikh_voice_speed', value),
+                      );
+                    },
+                  ),
+                  Row(
+                    children: [
+                      const Expanded(child: Text('مستوى الصوت')),
+                      Text(
+                        '${(_voiceVolume * 100).round()}%',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Slider(
+                    value: _voiceVolume,
+                    min: 0,
+                    max: 1,
+                    divisions: 20,
+                    label: '${(_voiceVolume * 100).round()}%',
+                    onChanged: (value) {
+                      setSheetState(() => _voiceVolume = value);
+                      setState(() => _voiceVolume = value);
+                      unawaited(
+                        widget.storage.setDouble('sheikh_voice_volume', value),
+                      );
+                    },
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: _voiceRepliesEnabled,
+                    title: const Text('تشغيل ردود المساعد صوتيًا'),
+                    subtitle: const Text('عند إيقافه تبقى الردود مكتوبة في سجل المحادثة'),
+                    onChanged: (value) {
+                      setSheetState(() => _voiceRepliesEnabled = value);
+                      setState(() => _voiceRepliesEnabled = value);
+                      unawaited(
+                        widget.storage.setBool(
+                          'sheikh_voice_replies_enabled',
+                          value,
+                        ),
+                      );
+                    },
+                  ),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
+                    value: _autoHideAyah,
+                    title: const Text('إخفاء الآية تلقائيًا عند التسميع'),
+                    subtitle: const Text('يمكنك تغيير ذلك في أي وقت من شاشة التسميع'),
+                    onChanged: (value) {
+                      setSheetState(() => _autoHideAyah = value);
+                      setState(() => _autoHideAyah = value);
+                      unawaited(
+                        widget.storage.setBool('sheikh_auto_hide_ayah', value),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'تُحفظ هذه التفضيلات على الجهاز وتُطبّق في الجلسات القادمة.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _voiceAssistantCard(ThemeData theme) {
     final scheme = theme.colorScheme;
     final progress = _assistantBusy && _assistantDownloadProgress > 0
         ? _assistantDownloadProgress
         : null;
+    final String stateLabel;
+    final IconData stateIcon;
+    final Color stateColor;
+
+    if (_assistantBusy) {
+      stateLabel = 'جارٍ تجهيز النماذج';
+      stateIcon = Icons.downloading_rounded;
+      stateColor = scheme.tertiary;
+    } else if (_assistantSpeaking) {
+      stateLabel = 'المساعد يتحدث الآن';
+      stateIcon = Icons.volume_up_rounded;
+      stateColor = scheme.primary;
+    } else if (_assistantListening || _listening) {
+      stateLabel = 'أستمع إليك الآن';
+      stateIcon = Icons.graphic_eq_rounded;
+      stateColor = scheme.primary;
+    } else if (_assistantConversationActive) {
+      stateLabel = 'الجلسة الصوتية نشطة';
+      stateIcon = Icons.mic_rounded;
+      stateColor = scheme.primary;
+    } else if (_assistantReady) {
+      stateLabel = 'المساعد جاهز';
+      stateIcon = Icons.check_circle_rounded;
+      stateColor = scheme.primary;
+    } else {
+      stateLabel = 'لم يتم تجهيز المساعد بعد';
+      stateIcon = Icons.mic_none_rounded;
+      stateColor = scheme.onSurfaceVariant;
+    }
+
+    final elapsed = _assistantSessionStartedAt == null
+        ? null
+        : DateTime.now().difference(_assistantSessionStartedAt!);
+    final sessionTime = elapsed == null
+        ? '—'
+        : '${elapsed.inMinutes.toString().padLeft(2, '0')}:${(elapsed.inSeconds % 60).toString().padLeft(2, '0')}';
+
     return Card(
+      color: scheme.surface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(22),
+        side: BorderSide(color: scheme.outlineVariant),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(15),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: scheme.primaryContainer,
-                  child: Icon(Icons.forum_rounded, color: scheme.primary),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: stateColor.withValues(alpha: 0.14),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: stateColor.withValues(alpha: 0.32),
+                    ),
+                  ),
+                  child: Icon(stateIcon, color: stateColor, size: 25),
                 ),
-                const SizedBox(width: 10),
-                const Expanded(
+                const SizedBox(width: 12),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'المساعد الصوتي الذكي',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          color: scheme.onSurface,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
+                      const SizedBox(height: 3),
                       Text(
-                        'حوار عربي محلي · لا يحتاج مفتاح API',
-                        style: TextStyle(fontSize: 11),
+                        'حوار عربي محلي · دون مفتاح API',
+                        style: TextStyle(
+                          color: scheme.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
                       ),
                     ],
                   ),
                 ),
-                if (_assistantReady)
-                  Icon(Icons.check_circle, color: scheme.primary),
+                IconButton(
+                  tooltip: 'إعدادات الصوت',
+                  onPressed: _openVoiceAssistantSettings,
+                  icon: const Icon(Icons.tune_rounded),
+                ),
+                IconButton(
+                  tooltip: 'مسح سجل المحادثة',
+                  onPressed: _assistantTranscript.isEmpty
+                      ? null
+                      : _clearAssistantTranscript,
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                ),
               ],
             ),
-            const SizedBox(height: 9),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: stateColor.withValues(alpha: 0.09),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: stateColor.withValues(alpha: 0.22)),
+              ),
+              child: Row(
+                children: [
+                  Icon(stateIcon, color: stateColor, size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      stateLabel,
+                      style: TextStyle(
+                        color: stateColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                  if (_offlineArabicVoice.isRecognitionReady)
+                    _voiceCapabilityChip(
+                      icon: Icons.hearing_rounded,
+                      label: 'Whisper',
+                      color: stateColor,
+                    ),
+                  if (_offlineArabicVoice.isSynthesisReady) ...[
+                    const SizedBox(width: 5),
+                    _voiceCapabilityChip(
+                      icon: Icons.record_voice_over_rounded,
+                      label: 'صوت محلي',
+                      color: stateColor,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
             Text(
               _assistantModelStatus,
               style: TextStyle(
+                color: scheme.onSurfaceVariant,
                 fontSize: 12,
-                color: theme.textTheme.bodyMedium?.color,
+                height: 1.4,
               ),
             ),
             if (_assistantBusy) ...[
-              const SizedBox(height: 8),
-              LinearProgressIndicator(value: progress),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 7,
+                  backgroundColor: scheme.surfaceContainerHighest,
+                ),
+              ),
               if (_assistantModelStatus.startsWith('تنزيل'))
                 Align(
                   alignment: AlignmentDirectional.centerEnd,
@@ -1255,21 +1512,52 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                   ),
                 ),
             ],
-            const SizedBox(height: 10),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _voiceMetric(
+                    theme,
+                    icon: Icons.forum_outlined,
+                    label: 'التبادلات',
+                    value: '$_assistantTurnCount',
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _voiceMetric(
+                    theme,
+                    icon: Icons.timer_outlined,
+                    label: 'مدة الجلسة',
+                    value: sessionTime,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _voiceMetric(
+                    theme,
+                    icon: Icons.speed_rounded,
+                    label: 'سرعة النطق',
+                    value: '${_voiceSpeed.toStringAsFixed(2)}×',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             if (_assistantConversationActive) ...[
-              OutlinedButton.icon(
+              FilledButton.tonalIcon(
                 onPressed: _stopVoiceAssistant,
                 icon: const Icon(Icons.stop_circle_outlined),
-                label: const Text('إنهاء الحوار'),
+                label: const Text('إنهاء الحوار الصوتي'),
               ),
-              if (!_assistantListening &&
-                  !_assistantSpeaking &&
-                  _assistantPhase != _AssistantPhase.reciting)
-                FilledButton.tonalIcon(
-                  onPressed: _resumeAssistantListening,
-                  icon: const Icon(Icons.mic_rounded),
-                  label: const Text('استمع مجددًا'),
-                ),
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: (_assistantListening || _assistantSpeaking)
+                    ? null
+                    : _resumeAssistantListening,
+                icon: const Icon(Icons.mic_rounded),
+                label: const Text('استمع مجددًا'),
+              ),
             ] else
               FilledButton.icon(
                 onPressed: _assistantBusy ? null : _prepareVoiceAssistant,
@@ -1285,42 +1573,218 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                           ? 'ابدأ الحوار الصوتي'
                           : 'تنزيل وتجهيز المساعد'),
                 ),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(48),
+                ),
               ),
+            if (_lastAssistantMessage.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _repeatLastAssistantMessage,
+                icon: const Icon(Icons.replay_rounded),
+                label: const Text('إعادة آخر رد صوتي'),
+              ),
+            ],
+            const SizedBox(height: 12),
+            Text(
+              'أوامر سريعة',
+              style: TextStyle(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 7),
+            Wrap(
+              spacing: 7,
+              runSpacing: 7,
+              children: [
+                _voiceCommandChip('السابق', Icons.skip_previous_rounded, () {
+                  unawaited(_move(-1));
+                }),
+                _voiceCommandChip('التالي', Icons.skip_next_rounded, () {
+                  unawaited(_move(1));
+                }),
+                _voiceCommandChip('كرر التلاوة', Icons.replay_rounded, () {
+                  unawaited(_playReference());
+                }),
+                _voiceCommandChip('أخفِ الآية', Icons.visibility_off_outlined, () {
+                  setState(() => _showText = false);
+                }),
+                _voiceCommandChip('أظهر الآية', Icons.visibility_outlined, () {
+                  setState(() => _showText = true);
+                }),
+                _voiceCommandChip('ابدأ التسميع', Icons.mic_none_rounded, () {
+                  unawaited(_start());
+                }),
+                _voiceCommandChip('اسمع أمرًا', Icons.record_voice_over, () {
+                  if (!_listening) unawaited(_startVoiceCommand());
+                }),
+              ],
+            ),
             if (_assistantTranscript.isNotEmpty) ...[
-              const Divider(height: 22),
-              ..._assistantTranscript.map((line) {
-                final isAssistant = line['role'] == 'assistant';
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 7),
-                  child: Align(
-                    alignment: isAssistant
-                        ? AlignmentDirectional.centerStart
-                        : AlignmentDirectional.centerEnd,
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 310),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 11,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isAssistant
-                            ? scheme.surfaceContainerHighest
-                            : scheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        line['content'] ?? '',
-                        textAlign: TextAlign.start,
-                        style: const TextStyle(fontSize: 12, height: 1.45),
+              const Divider(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'سجل المحادثة',
+                      style: TextStyle(
+                        color: scheme.onSurface,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
                       ),
                     ),
                   ),
-                );
-              }),
+                  Text(
+                    'يُحفظ على هذا الجهاز',
+                    style: TextStyle(
+                      color: scheme.onSurfaceVariant,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const ClampingScrollPhysics(),
+                  itemCount: _assistantTranscript.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 7),
+                  itemBuilder: (context, index) {
+                    final line = _assistantTranscript[index];
+                    final isAssistant = line['role'] == 'assistant';
+                    return Align(
+                      alignment: isAssistant
+                          ? AlignmentDirectional.centerStart
+                          : AlignmentDirectional.centerEnd,
+                      child: Container(
+                        constraints: const BoxConstraints(maxWidth: 310),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isAssistant
+                              ? scheme.surfaceContainerHighest
+                              : scheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: scheme.outlineVariant.withValues(alpha: 0.65),
+                          ),
+                        ),
+                        child: Text(
+                          line['content'] ?? '',
+                          textAlign: TextAlign.start,
+                          style: TextStyle(
+                            color: isAssistant
+                                ? scheme.onSurface
+                                : scheme.onPrimaryContainer,
+                            fontSize: 12,
+                            height: 1.5,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _voiceCapabilityChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _voiceMetric(
+    ThemeData theme, {
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    final scheme = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(13),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 16, color: scheme.primary),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              color: scheme.onSurface,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: scheme.onSurfaceVariant,
+              fontSize: 9,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _voiceCommandChip(
+    String label,
+    IconData icon,
+    VoidCallback onPressed,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return ActionChip(
+      avatar: Icon(icon, size: 16, color: scheme.primary),
+      label: Text(label),
+      onPressed: onPressed,
+      backgroundColor: scheme.surfaceContainerHighest,
+      side: BorderSide(color: scheme.outlineVariant),
+      labelStyle: TextStyle(
+        color: scheme.onSurface,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+      ),
+      visualDensity: VisualDensity.compact,
     );
   }
 
