@@ -18,7 +18,7 @@ class _SadaqahDedicationScreenState extends State<SadaqahDedicationScreen> {
   bool _continuing = false;
 
   static const String _spokenText =
-      'هذا التطبيق قلم مسلم، صدقة جارية على روح جدتي سعدية محمد قشطة، '
+      'هذا التطبيق قلم مسلم، صدقة جارية على روح جدتي سعديه محمد قشطة، '
       'وعيد الزبلاوي، وأحمد السيد السيسي. '
       'نسأل الله أن يرحمهم رحمة واسعة، ويغفر لهم، ويعفو عنهم، '
       'وينوّر قبورهم، ويوسّع مدخلهم، ويجعل مثواهم الجنة. '
@@ -205,7 +205,7 @@ class _SadaqahDedicationScreenState extends State<SadaqahDedicationScreen> {
                             ),
                           ),
                           const SizedBox(height: 15),
-                          _dedicatedName(scheme, 'جدتي سعدية محمد قشطة'),
+                          _dedicatedName(scheme, 'جدتي سعديه محمد قشطة'),
                           const SizedBox(height: 9),
                           _dedicatedName(scheme, 'عيد الزبلاوي'),
                           const SizedBox(height: 9),
