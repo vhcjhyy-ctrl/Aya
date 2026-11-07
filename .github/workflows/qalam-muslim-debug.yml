@@ -5,6 +5,7 @@ on:
     branches:
       - qalam-muslim-development
       - qalam-muslim-enhancements
+      - qalam-muslim-complete-expansion
   workflow_dispatch:
 
 concurrency:
