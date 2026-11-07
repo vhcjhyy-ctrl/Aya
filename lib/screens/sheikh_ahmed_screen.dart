@@ -84,6 +84,13 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   final List<Map<String, String>> _assistantHistory = [];
   final List<Map<String, String>> _assistantTranscript = [];
 
+  double _voiceSpeed = 0.95;
+  double _voiceVolume = 0.90;
+  bool _voiceRepliesEnabled = true;
+  bool _autoHideAyah = true;
+  DateTime? _assistantSessionStartedAt;
+  int _assistantTurnCount = 0;
+  String _lastAssistantMessage = '';
 
   Ayah? get _ayah => _ayahs.isEmpty ? null : _ayahs[_index];
   List<Map<String, dynamic>> get _availableReferenceReciters =>
@@ -115,6 +122,23 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _surah = widget.storage.getInt('sheikh_selected_surah', defaultValue: 1);
     _dailyTarget = widget.storage.getInt('hifz_daily_target', defaultValue: 5);
     _repeatReference = widget.storage.getBool('hifz_repeat_reference', defaultValue: false);
+    _voiceSpeed = widget.storage
+        .getDouble('sheikh_voice_speed', defaultValue: 0.95)
+        .clamp(0.70, 1.30)
+        .toDouble();
+    _voiceVolume = widget.storage
+        .getDouble('sheikh_voice_volume', defaultValue: 0.90)
+        .clamp(0.0, 1.0)
+        .toDouble();
+    _voiceRepliesEnabled = widget.storage.getBool(
+      'sheikh_voice_replies_enabled',
+      defaultValue: true,
+    );
+    _autoHideAyah = widget.storage.getBool(
+      'sheikh_auto_hide_ayah',
+      defaultValue: true,
+    );
+    _restoreAssistantTranscript();
     _selectedReciter = widget.storage.getString(
       'hifz_reference_reciter',
       defaultValue: '',
@@ -559,6 +583,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   Future<void> _startVoiceAssistant() async {
     _assistantHistory.clear();
     _assistantTranscript.clear();
+    _assistantSessionStartedAt = DateTime.now();
+    _assistantTurnCount = 0;
+    _lastAssistantMessage = '';
+    unawaited(_persistAssistantTranscript());
     _assistantNoSpeechRetries = 0;
     _assistantFinalResultHandled = true;
     _assistantConversationActive = true;
@@ -569,12 +597,76 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     );
   }
 
-  void _addAssistantTranscript(String role, String content) {
-    _assistantTranscript.add({'role': role, 'content': content});
-    if (_assistantTranscript.length > 10) {
-      _assistantTranscript.removeRange(0, _assistantTranscript.length - 10);
+  Future<void> _restoreAssistantTranscript() async {
+    try {
+      final raw = widget.storage.getString(
+        'sheikh_voice_transcript_v1',
+        defaultValue: '[]',
+      );
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        _assistantTranscript
+          ..clear()
+          ..addAll(
+            decoded
+                .whereType<Map>()
+                .map((line) => <String, String>{
+                      'role': (line['role'] ?? 'assistant').toString(),
+                      'content': (line['content'] ?? '').toString(),
+                    })
+                .where((line) => line['content']!.isNotEmpty)
+                .toList()
+                .reversed
+                .take(30)
+                .toList()
+                .reversed,
+          );
+      }
+    } catch (error) {
+      debugPrint('Could not restore voice transcript: $error');
     }
     if (mounted) setState(() {});
+  }
+
+  Future<void> _persistAssistantTranscript() async {
+    try {
+      await widget.storage.setString(
+        'sheikh_voice_transcript_v1',
+        jsonEncode(_assistantTranscript),
+      );
+    } catch (error) {
+      debugPrint('Could not save voice transcript: $error');
+    }
+  }
+
+  void _addAssistantTranscript(String role, String content) {
+    _assistantTranscript.add({'role': role, 'content': content});
+    if (_assistantTranscript.length > 30) {
+      _assistantTranscript.removeRange(0, _assistantTranscript.length - 30);
+    }
+    unawaited(_persistAssistantTranscript());
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _clearAssistantTranscript() async {
+    if (_assistantConversationActive) {
+      await _stopVoiceAssistant();
+    }
+    _assistantHistory.clear();
+    _assistantTranscript.clear();
+    _lastAssistantMessage = '';
+    _assistantTurnCount = 0;
+    await widget.storage.setString('sheikh_voice_transcript_v1', '[]');
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _repeatLastAssistantMessage() async {
+    final message = _lastAssistantMessage.trim();
+    if (message.isEmpty) {
+      _toast('لا توجد إجابة صوتية سابقة لإعادتها.');
+      return;
+    }
+    await _assistantSpeak(message);
   }
 
   void _rememberAssistantMessage(String role, String content) {
@@ -585,6 +677,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _assistantSpeak(String message) async {
+    if (!_voiceRepliesEnabled) return;
     if (mounted) setState(() => _assistantSpeaking = true);
     String? generatedFile;
     StreamSubscription<void>? completionSubscription;
@@ -594,9 +687,13 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       // can report the ar-EG locale even when no Arabic voice is installed.
       if (_offlineVoiceReady) {
         try {
-          generatedFile = await _offlineArabicVoice.synthesizeToFile(message);
+          generatedFile = await _offlineArabicVoice.synthesizeToFile(
+            message,
+            speed: _voiceSpeed,
+          );
           await _player.stop();
           _activePlayerUse = 'assistant';
+          await _player.setVolume(_voiceVolume);
           playbackCompleted = Completer<void>();
           completionSubscription = _player.onPlayerComplete.listen((_) {
             if (playbackCompleted != null &&
@@ -620,6 +717,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
       if (_ttsReady) {
         await _tts.stop();
+        await _tts.setVolume(_voiceVolume);
+        await _tts.setSpeechRate((_voiceSpeed * 0.48).clamp(0.30, 0.70));
         await _tts.speak(message);
         return;
       }
@@ -652,6 +751,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     bool rememberInModelHistory = true,
   }) async {
     if (!_assistantConversationActive) return;
+    _lastAssistantMessage = message;
     _addAssistantTranscript('assistant', message);
     if (rememberInModelHistory) {
       _rememberAssistantMessage('assistant', message);
@@ -753,6 +853,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     }
     _addAssistantTranscript('user', input);
     _rememberAssistantMessage('user', input);
+    _assistantTurnCount++;
+    if (mounted) setState(() {});
 
     final command = QuranVoiceIntent.parseCommand(input);
     if (command == QuranVoiceCommand.stop) {
@@ -894,7 +996,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       _assistantManualRecognitionStop = false;
       _recognized = '';
       _result = null;
-      _showText = false;
+      _showText = !_autoHideAyah;
       _status = 'استمع إلى تلاوتك للآية الحالية...';
     });
     await _start();
@@ -1266,7 +1368,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       setState(() {
         _recognized = '';
         _result = null;
-        _showText = false;
+        _showText = !_autoHideAyah;
         _status = 'استمع إلى تلاوتك — التعرف العربي محلي...';
         _listening = true;
       });
