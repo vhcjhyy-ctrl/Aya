@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:url_launcher/url_launcher.dart';
@@ -661,6 +662,27 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _clearAssistantTranscript() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('مسح سجل المحادثة؟'),
+        content: const Text(
+          'سيُحذف سجل محادثات المساعد المحفوظ على هذا الجهاز فقط. '
+          'لن تتأثر الآيات أو خطة الحفظ أو محفوظاتك.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('مسح السجل'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     if (_assistantConversationActive) {
       await _stopVoiceAssistant();
     }
@@ -670,6 +692,19 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _assistantTurnCount = 0;
     await widget.storage.setString('sheikh_voice_transcript_v1', '[]');
     if (mounted) setState(() {});
+  }
+
+  Future<void> _copyAssistantTranscript() async {
+    if (_assistantTranscript.isEmpty) {
+      _toast('لا يوجد سجل محادثة لنسخه.');
+      return;
+    }
+    final text = _assistantTranscript.map((line) {
+      final speaker = line['role'] == 'assistant' ? 'المساعد' : 'المستخدم';
+      return '$speaker: ${line['content'] ?? ''}';
+    }).join('\n\n');
+    await Clipboard.setData(ClipboardData(text: text));
+    _toast('نُسخ سجل المحادثة إلى الحافظة.');
   }
 
   Future<void> _repeatLastAssistantMessage() async {
@@ -1505,6 +1540,13 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                   tooltip: 'إعدادات الصوت',
                   onPressed: _openVoiceAssistantSettings,
                   icon: const Icon(Icons.tune_rounded),
+                ),
+                IconButton(
+                  tooltip: 'نسخ سجل المحادثة',
+                  onPressed: _assistantTranscript.isEmpty
+                      ? null
+                      : _copyAssistantTranscript,
+                  icon: const Icon(Icons.copy_all_outlined),
                 ),
                 IconButton(
                   tooltip: 'مسح سجل المحادثة',
