@@ -723,7 +723,7 @@ class _IslamicLifeCenterScreenState extends State<IslamicLifeCenterScreen>
           child: Column(
             children: [
               const Text(
-                'إِذَا مَاتَ الإِنْسَانُ انْقَطَعَ عَنْهُ عَمَلُهُ إِلَّا مِنْ ثَلَاثَةٍ: '
+                'إِذَا مَاتَ الإِنْسَانُ انْقَطَعَ عَنْهُ عَمَلُهُ إِلَّا مِنْ ثَلَاثٍ: '
                 'صَدَقَةٍ جَارِيَةٍ، أَوْ عِلْمٍ يُنْتَفَعُ بِهِ، '
                 'أَوْ وَلَدٍ صَالِحٍ يَدْعُو لَهُ.',
                 textAlign: TextAlign.center,
