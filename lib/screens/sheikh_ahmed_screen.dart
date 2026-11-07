@@ -103,15 +103,18 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     );
     _loadRecords();
     _loadSurah(_surah);
-    _loadReferenceReciters();
     _initSpeech();
     _initTts();
   }
 
-  Future<void> _loadReferenceReciters() async {
+  Future<void> _loadReferenceR  Future<void> _loadReferenceReciters() async {
+    final requestedSurah = _surah;
     if (mounted) setState(() => _loadingReferenceReciters = true);
     try {
-      final reciters = await RecitersCacheService.getRecitersForRiwayah(1);
+      final reciters = await RecitersCacheService.getRecitersForRiwayah(
+        1,
+        surahNumber: requestedSurah,
+      );
       final sources = <Map<String, dynamic>>[];
       for (final reciter in reciters) {
         final moshafs = reciter['moshaf'] as List? ?? const [];
@@ -139,7 +142,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       });
 
       final availableSources = sources
-          .where((source) => RecitersCacheService.moshafHasSurah(source, _surah))
+          .where((source) =>
+              RecitersCacheService.moshafHasSurah(source, requestedSurah))
           .toList();
       final savedServer = widget.storage.getString(
         'hifz_reference_reciter',
@@ -154,27 +158,30 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
               ? availableSources.first['server'] as String
               : '');
 
-      if (selected.isNotEmpty && selected != savedServer) {
+      if (selected != savedServer) {
         await widget.storage.setString('hifz_reference_reciter', selected);
       }
 
-      if (!mounted) return;
+      // A slower request for the previous surah must not replace the
+      // catalogue after the user has already selected another surah.
+      if (!mounted || requestedSurah != _surah) return;
       setState(() {
         _referenceReciters = sources;
         _selectedReciter = selected;
         _loadingReferenceReciters = false;
       });
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || requestedSurah != _surah) return;
       setState(() {
         _referenceReciters = [];
         _loadingReferenceReciters = false;
-        _status = 'تعذّر تحميل مصادر التلاوة. تحقق من الاتصال ثم أعد فتح الشاشة.';
+        _status =
+            'تعذّر تحميل مصادر التلاوة. تحقق من الاتصال ثم أعد المحاولة.';
       });
     }
   }
 
-  Future<void> _loadRecords() async {
+async {
     try {
       final value = jsonDecode(widget.storage.getString('qalam_hifz_progress_v1', defaultValue: '{}'));
       if (value is Map) _records = Map<String, dynamic>.from(value);
@@ -1478,17 +1485,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _ensureSelectedReferenceReciterForSurah() async {
-    final available = _availableReferenceReciters;
-    final isSelectedAvailable = available.any(
-      (source) => source['server'] == _selectedReciter,
-    );
-    if (isSelectedAvailable) return;
-
-    final next = available.isEmpty
-        ? ''
-        : available.first['server'] as String;
-    if (mounted) setState(() => _selectedReciter = next);
-    await widget.storage.setString('hifz_reference_reciter', next);
+    // Refresh from MP3Quran with the newly selected surah so the picker
+    // contains only reciters that publish this exact recording.
+    await _loadReferenceReciters();
   }
 
   Future<void> _playReference() async {
