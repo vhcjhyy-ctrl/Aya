@@ -1812,23 +1812,38 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
               ),
             ] else
               FilledButton.icon(
-                onPressed: _assistantBusy ? null : _prepareVoiceAssistant,
+                onPressed: _assistantBusy
+                    ? null
+                    : (_assistantReady
+                        ? _startVoiceAssistant
+                        : _prepareVoiceAssistant),
                 icon: Icon(
                   _assistantBusy
                       ? Icons.downloading_rounded
-                      : Icons.mic_rounded,
+                      : (_assistantReady
+                          ? Icons.chat_bubble_outline_rounded
+                          : Icons.auto_awesome_rounded),
                 ),
                 label: Text(
                   _assistantBusy
                       ? 'جارٍ تجهيز المساعد...'
                       : (_assistantReady
-                          ? 'ابدأ الحوار الصوتي'
-                          : 'تنزيل وتجهيز المساعد'),
+                          ? 'ابدأ المحادثة المجانية'
+                          : 'اختيار وتجهيز المساعد المجاني'),
                 ),
                 style: FilledButton.styleFrom(
                   minimumSize: const Size.fromHeight(48),
                 ),
               ),
+            if (_assistantReady && !_offlineVoiceReady &&
+                !_assistantConversationActive) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: _assistantBusy ? null : _prepareVoiceAssistant,
+                icon: const Icon(Icons.record_voice_over_rounded),
+                label: const Text('إضافة الصوت المحلي · 245 MB'),
+              ),
+            ],
             if (_lastAssistantMessage.isNotEmpty) ...[
               const SizedBox(height: 8),
               OutlinedButton.icon(
