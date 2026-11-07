@@ -5,6 +5,8 @@ import 'package:crypto/crypto.dart';
 import 'package:llama_flutter_android/llama_flutter_android.dart';
 import 'package:path_provider/path_provider.dart';
 
+import 'model_integrity_stamp.dart';
+
 /// Optional on-device conversational model for Qalam Muslim.
 /// The GGUF file is downloaded once; no API key or hosted inference is used.
 class LocalAiAssistantService {
@@ -43,16 +45,39 @@ class LocalAiAssistantService {
       return false;
     }
 
-    // Cache successful verification to avoid hashing 528 MB on every app open.
+    // Avoid hashing 528 MB on every open, but invalidate the cached
+    // verification whenever the model size or modification time changes.
+    final stat = await file.stat();
     final marker = File('$path.sha256');
     if (await marker.exists() &&
-        (await marker.readAsString()).trim() == expectedModelSha256) {
+        ModelIntegrityStamp.matches(
+          await marker.readAsString(),
+          sha256: expectedModelSha256,
+          byteLength: stat.size,
+          modifiedAtMicros: stat.modified.microsecondsSinceEpoch,
+        )) {
       return true;
     }
 
     final digest = await sha256.bind(file.openRead()).first;
     if (digest.toString() != expectedModelSha256) return false;
-    await marker.writeAsString(expectedModelSha256, flush: true);
+
+    // Ensure the file did not change while the digest was being calculated.
+    final verifiedStat = await file.stat();
+    if (verifiedStat.size != stat.size ||
+        verifiedStat.modified.microsecondsSinceEpoch !=
+            stat.modified.microsecondsSinceEpoch) {
+      return false;
+    }
+
+    await marker.writeAsString(
+      ModelIntegrityStamp.encode(
+        sha256: expectedModelSha256,
+        byteLength: verifiedStat.size,
+        modifiedAtMicros: verifiedStat.modified.microsecondsSinceEpoch,
+      ),
+      flush: true,
+    );
     return true;
   }
 
@@ -139,7 +164,15 @@ class LocalAiAssistantService {
 
       if (await target.exists()) await target.delete();
       await partial.rename(path);
-      await File('$path.sha256').writeAsString(expectedModelSha256, flush: true);
+      final installedStat = await target.stat();
+      await File('$path.sha256').writeAsString(
+        ModelIntegrityStamp.encode(
+          sha256: expectedModelSha256,
+          byteLength: installedStat.size,
+          modifiedAtMicros: installedStat.modified.microsecondsSinceEpoch,
+        ),
+        flush: true,
+      );
       onProgress(1);
       return path;
     } catch (_) {
