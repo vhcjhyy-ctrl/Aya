@@ -68,6 +68,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   bool _offlineVoiceReady = false;
   bool _assistantReady = false;
   bool _assistantBusy = false;
+  bool _assistantVoiceDownloadCancelled = false;
   bool _assistantConversationActive = false;
   bool _assistantListening = false;
   bool _assistantSpeaking = false;
@@ -345,6 +346,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _cancelVoiceAssistantDownload() async {
+    _assistantVoiceDownloadCancelled = true;
     await _offlineArabicVoice.cancelDownload();
     await _localAssistant.cancelDownload();
     if (mounted) {
@@ -402,6 +404,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   Future<void> _prepareVoiceAssistant() async {
     if (_assistantBusy) return;
+    _assistantVoiceDownloadCancelled = false;
     if (!_offlineVoiceReady &&
         !await _ensureSupertonicLicenseAccepted()) {
       _toast('يجب قبول شروط استخدام نموذج الصوت قبل تنزيله.');
@@ -451,6 +454,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         _offlineVoiceReady = true;
       } catch (voiceError) {
         _offlineVoiceReady = false;
+        if (_assistantVoiceDownloadCancelled) {
+          throw StateError('أُلغي تنزيل محرك الصوت المحلي.');
+        }
         if (!_speechReady) rethrow;
         if (mounted) {
           setState(() => _assistantModelStatus =
@@ -499,7 +505,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       }
     } catch (error) {
       if (mounted) {
-        final cancelled = error.toString().contains('أُلغي');
+        final cancelled = _assistantVoiceDownloadCancelled ||
+            error.toString().contains('أُلغي');
         setState(() {
           _assistantModelStatus = cancelled
               ? 'أُلغي التنزيل.'
