@@ -4,10 +4,11 @@ on:
   push:
     branches:
       - qalam-muslim-development
+      - qalam-muslim-enhancements
   workflow_dispatch:
 
 concurrency:
-  group: qalam-muslim-final-verification-${{ github.ref }}
+  group: qalam-muslim-final-verification-\${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -16,7 +17,7 @@ permissions:
 jobs:
   build-and-launch-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - name: Check out source
         uses: actions/checkout@v6
@@ -31,7 +32,8 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.4'
+          # Includes the Android release AOT packaging fix shipped in Flutter 3.44.5.
+          flutter-version: '3.44.9'
           channel: stable
           cache: true
 
@@ -39,11 +41,10 @@ jobs:
         run: flutter pub get
 
       - name: Analyze Dart source
-        continue-on-error: true
-        run: flutter analyze --no-pub
+        run: flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos
 
-      - name: Run Quran recitation comparison tests
-        run: flutter test --no-pub test/quran_recitation_matcher_test.dart
+      - name: Run Flutter tests
+        run: flutter test --no-pub
 
       - name: Build optimized ARM64 release
         run: |
@@ -51,13 +52,16 @@ jobs:
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-arm64-release.apk
 
-      - name: Verify ARM64 APK metadata and launcher icon
+      - name: Verify ARM64 APK metadata and native libraries
         run: |
           BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           "$BUILD_TOOLS/aapt" dump badging dist/qalam-muslim-arm64-release.apk | tee dist/apk-badging.txt
           grep -q "package: name='com.ahmed.qalammuslim'" dist/apk-badging.txt
           grep -q "application-icon" dist/apk-badging.txt
           test -s dist/qalam-muslim-arm64-release.apk
+          unzip -l dist/qalam-muslim-arm64-release.apk | tee dist/arm64-apk-contents.txt
+          grep -Eq 'lib/arm64-v8a/libapp\.so$' dist/arm64-apk-contents.txt
+          grep -Eq 'lib/arm64-v8a/libflutter\.so$' dist/arm64-apk-contents.txt
 
       - name: Upload ARM64 release APK
         uses: actions/upload-artifact@v6
@@ -66,13 +70,23 @@ jobs:
           path: |
             dist/qalam-muslim-arm64-release.apk
             dist/apk-badging.txt
+            dist/arm64-apk-contents.txt
           if-no-files-found: error
           retention-days: 14
 
       - name: Build x86_64 release for emulator
         run: |
+          # Do not reuse Flutter outputs from the ARM64 build.
+          flutter clean
+          flutter pub get
           flutter build apk --flavor fdroid --release --target-platform android-x64
           cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
+
+      - name: Verify x86_64 Flutter AOT libraries
+        run: |
+          unzip -l dist/qalam-muslim-x86_64-release.apk | tee dist/x86_64-apk-contents.txt
+          grep -Eq 'lib/x86_64/libapp\.so$' dist/x86_64-apk-contents.txt
+          grep -Eq 'lib/x86_64/libflutter\.so$' dist/x86_64-apk-contents.txt
 
       - name: Install and launch on Android 11 emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -86,41 +100,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
           script: |
-            set -eu
-            mkdir -p dist
-            adb wait-for-device
-            adb install -r dist/qalam-muslim-x86_64-release.apk
-            adb shell am force-stop com.ahmed.qalammuslim
-            adb shell am start -n com.ahmed.qalammuslim/com.quran.aya.MainActivity > dist/launch-result.txt 2>&1 || true
-            sleep 10
-            PID=""
-            for attempt in $(seq 1 15); do
-              PID="$(adb shell pidof com.ahmed.qalammuslim 2>/dev/null | tr -d '\\r' || true)"
-              if [ -n "$PID" ]; then
-                break
-              fi
-              sleep 2
-            done
-            if [ -z "$PID" ]; then
-              adb shell dumpsys activity activities > dist/activities-after-launch.txt || true
-              adb logcat -d -v time -t 5000 > dist/android-launch-log.txt || true
-              echo "Qalam Muslim process did not stay alive after launch."
-              exit 1
-            fi
-            echo "$PID" | tee dist/process-id.txt
-            sleep 15
-            adb shell dumpsys activity activities > dist/activities-after-launch.txt
-            adb exec-out screencap -p > dist/launch-screen.png
-            adb logcat -d -v time -t 5000 > dist/android-launch-log.txt
-            if ! grep -q "com.quran.aya.MainActivity" dist/activities-after-launch.txt; then
-              echo "Qalam Muslim MainActivity is not visible in the activity stack."
-              exit 1
-            fi
-            if grep -E "FATAL EXCEPTION|Process: com.ahmed.qalammuslim" dist/android-launch-log.txt; then
-              echo "A fatal application exception was recorded."
-              exit 1
-            fi
-            echo "PASS: application installed, launched, and remained alive on Android 11."
+            bash .github/scripts/verify_android_launch.sh
 
       - name: Upload Android launch diagnostics
         if: always()
@@ -131,6 +111,9 @@ jobs:
             dist/launch-result.txt
             dist/process-id.txt
             dist/activities-after-launch.txt
+            dist/window-after-launch.txt
+            dist/app-window-after-launch.txt
+            dist/launch-result.txt
             dist/launch-screen.png
             dist/android-launch-log.txt
           if-no-files-found: ignore

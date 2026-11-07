@@ -289,18 +289,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
     _scrollToBottom();
 
     try {
+      // Prepare the local fiqh match while the database is opening.
+      // This avoids serializing two independent parts of the answer.
+      final keywords = _keywords(question);
+      final terms = (keywords.isEmpty ? <String>[question] : keywords).take(3).toList();
+      final fiqhMatches = _searchFiqhTopics(question, keywords);
       final database = await DatabaseService.getInstance();
       final lang = TranslationService.isArabic ? 'ara' : 'eng';
-      final hadithReady = await _areCoreHadithBooksReady(database, lang);
-      if (!hadithReady) {
-        _prepareHadithIndexInBackground(database, lang);
-      } else {
-        await _ensureHadithGradesLoaded();
-      }
-
-      final keywords = _keywords(question);
-      final terms = (keywords.isEmpty ? <String>[question] : keywords).take(5).toList();
-      final fiqhMatches = _searchFiqhTopics(question, keywords);
+      final hadithReadyFuture = _areCoreHadithBooksReady(database, lang);
+      final gradesFuture = _ensureHadithGradesLoaded();
       final ayahRows = <String, Map<String, dynamic>>{};
       final ayahScores = <String, int>{};
       final hadithRows = <String, Map<String, dynamic>>{};
@@ -312,8 +309,15 @@ class _AssistantScreenState extends State<AssistantScreen> {
           ayahBatches.add(await database.searchAyahs(term));
         } catch (_) {}
       }));
+      final hadithReady = await hadithReadyFuture;
+      if (!hadithReady) {
+        unawaited(gradesFuture);
+        _prepareHadithIndexInBackground(database, lang);
+      } else {
+        await gradesFuture;
+      }
       for (final batch in ayahBatches) {
-        for (final row in batch.take(18)) {
+        for (final row in batch.take(12)) {
           final key = row['surah_number'].toString() + ':' + row['ayah_number'].toString();
           ayahRows[key] = row;
           ayahScores[key] = (ayahScores[key] ?? 0) + 1;
@@ -324,7 +328,7 @@ class _AssistantScreenState extends State<AssistantScreen> {
         final batches = <List<Map<String, dynamic>>>[];
         await Future.wait(terms.map((term) async {
           try {
-            batches.add(await database.hadith.searchAllHadiths(lang, term, 14));
+            batches.add(await database.hadith.searchAllHadiths(lang, term, 8));
           } catch (_) {}
         }));
         for (final batch in batches) {

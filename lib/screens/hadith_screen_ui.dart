@@ -89,7 +89,7 @@ extension HadithScreenUi on _HadithScreenState {
                     }).toList(),
                     onChanged: (val) {
                       if (val != null) {
-                        setState(() {
+                        _updateHadithState(() {
                           _selectedBook = val;
                           _currentPage = 1;
                         });
@@ -103,7 +103,7 @@ extension HadithScreenUi on _HadithScreenState {
               TextButton(
                 onPressed: () {
                   final newLang = _displayLang == 'ara' ? 'eng' : 'ara';
-                  setState(() {
+                  _updateHadithState(() {
                     _displayLang = newLang;
                     _currentPage = 1;
                     if (newLang == 'eng' && _selectedBook.arabicOnly) {
@@ -227,7 +227,7 @@ extension HadithScreenUi on _HadithScreenState {
               ),
               onChanged: (q) {
                 if (q.trim().isEmpty) {
-                  setState(() {
+                  _updateHadithState(() {
                     _crossSearchResults = null;
                     _activeSearchQuery = '';
                     _currentPage = 1;

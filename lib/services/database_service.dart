@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show compute;
+import 'package:flutter/foundation.dart' show compute, visibleForTesting;
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
@@ -23,13 +23,29 @@ class DatabaseService {
 
   DatabaseService._();
 
-  static Future<DatabaseService> getInstance() async {
-    if (_instance == null) {
-      _instance = DatabaseService._();
-      _database = await _initDatabase();
-      _instance!._hadith = HadithDatabaseService(_database!);
-    }
-    return _instance!;
+  static Future<DatabaseService>? _initializing;
+
+  static Future<DatabaseService> getInstance() {
+    final instance = _instance;
+    if (instance != null) return Future.value(instance);
+
+    final pending = _initializing;
+    if (pending != null) return pending;
+
+    final initialization = _createInstance();
+    _initializing = initialization;
+    return initialization.whenComplete(() {
+      _initializing = null;
+    });
+  }
+
+  static Future<DatabaseService> _createInstance() async {
+    final instance = DatabaseService._();
+    final database = await _initDatabase();
+    _database = database;
+    instance._hadith = HadithDatabaseService(database);
+    _instance = instance;
+    return instance;
   }
 
   /// Resolves the databases directory path.
@@ -76,24 +92,16 @@ class DatabaseService {
       }
     }
 
-    Database? db;
-    try {
-      db = await openDatabase(
-        path,
-        version: _version,
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade,
-      );
-    } catch (e) {
-      // DB open failed — recreating
-      try { await deleteDatabase(path); } catch (_) {}
-      db = await openDatabase(
-        path,
-        version: _version,
-        onCreate: _onCreate,
-        onUpgrade: _onUpgrade,
-      );
-    }
+    // Never delete an existing database after a generic open/migration
+    // error. It may contain the bundled Quran data or the user's bookmarks,
+    // prayer history, and downloaded content. Surface the original error
+    // rather than risking silent data loss.
+    final db = await openDatabase(
+      path,
+      version: _version,
+      onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
+    );
 
     // Enable SQLite Write-Ahead Logging (WAL) and High-Performance PRAGMAs
     try {
@@ -111,7 +119,7 @@ class DatabaseService {
   static Future<void> _onCreate(Database db, int version) async {
     // Quran Surahs table
     await db.execute('''
-      CREATE TABLE surahs (
+      CREATE TABLE IF NOT EXISTS surahs (
         number INTEGER PRIMARY KEY,
         name TEXT NOT NULL,
         englishName TEXT NOT NULL,
@@ -123,7 +131,7 @@ class DatabaseService {
 
     // Quran Ayahs table
     await db.execute('''
-      CREATE TABLE ayahs (
+      CREATE TABLE IF NOT EXISTS ayahs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         surah_number INTEGER NOT NULL,
         ayah_number INTEGER NOT NULL,
@@ -138,12 +146,49 @@ class DatabaseService {
         FOREIGN KEY (surah_number) REFERENCES surahs (number)
       )
     ''');
-    await db.execute('CREATE INDEX idx_ayahs_surah ON ayahs(surah_number)');
-    await db.execute('CREATE INDEX idx_ayahs_page ON ayahs(page)');
+    // The bundled seed database may already contain some of these tables
+    // while still carrying user_version=0. Make bootstrap safe for an
+    // existing seed and add columns introduced after older seed schemas.
+    final addedCleanText = await _ensureColumnExists(
+      db,
+      'ayahs',
+      'text_arabic_clean',
+      "TEXT NOT NULL DEFAULT ''",
+    );
+    await _ensureColumnExists(
+      db, 'ayahs', 'text_english', "TEXT NOT NULL DEFAULT ''",
+    );
+    await _ensureColumnExists(db, 'ayahs', 'tafsir', 'TEXT');
+    await _ensureColumnExists(db, 'ayahs', 'juz', 'INTEGER');
+    await _ensureColumnExists(db, 'ayahs', 'hizb', 'INTEGER');
+    await _ensureColumnExists(db, 'ayahs', 'page', 'INTEGER DEFAULT 1');
+
+    if (addedCleanText) {
+      final rows = await db.query(
+        'ayahs',
+        columns: ['id', 'text_arabic'],
+      );
+      final batch = db.batch();
+      for (final row in rows) {
+        batch.update(
+          'ayahs',
+          {
+            'text_arabic_clean': stripTashkeel(
+              row['text_arabic'] as String? ?? '',
+            ).toLowerCase(),
+          },
+          where: 'id = ?',
+          whereArgs: [row['id']],
+        );
+      }
+      await batch.commit(noResult: true);
+    }
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_ayahs_surah ON ayahs(surah_number)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_ayahs_page ON ayahs(page)');
 
     // Prayer times cache table
     await db.execute('''
-      CREATE TABLE prayer_times_cache (
+      CREATE TABLE IF NOT EXISTS prayer_times_cache (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         cache_key TEXT UNIQUE NOT NULL,
         fajr TEXT, sunrise TEXT, dhuhr TEXT, asr TEXT,
@@ -156,7 +201,7 @@ class DatabaseService {
 
     // Bookmarks table
     await db.execute('''
-      CREATE TABLE bookmarks (
+      CREATE TABLE IF NOT EXISTS bookmarks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         surah_number INTEGER NOT NULL,
         surah_name TEXT NOT NULL,
@@ -168,7 +213,7 @@ class DatabaseService {
 
     // Custom dhikrs table
     await db.execute('''
-      CREATE TABLE custom_dhikrs (
+      CREATE TABLE IF NOT EXISTS custom_dhikrs (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         arabic TEXT NOT NULL,
@@ -181,7 +226,7 @@ class DatabaseService {
 
     // Monthly prayer calendar cache
     await db.execute('''
-      CREATE TABLE monthly_prayer_cache (
+      CREATE TABLE IF NOT EXISTS monthly_prayer_cache (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         year INTEGER NOT NULL,
         month INTEGER NOT NULL,
@@ -196,7 +241,7 @@ class DatabaseService {
 
     // Audio download status tracking
     await db.execute('''
-      CREATE TABLE audio_downloads (
+      CREATE TABLE IF NOT EXISTS audio_downloads (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         reciter_id TEXT NOT NULL,
         audio_type TEXT NOT NULL,
@@ -234,18 +279,18 @@ class DatabaseService {
 
     // Create indexes for fast lookups
     await db.execute(
-      'CREATE INDEX idx_prayer_cache_key ON prayer_times_cache(cache_key)',
+      'CREATE INDEX IF NOT EXISTS idx_prayer_cache_key ON prayer_times_cache(cache_key)',
     );
     await db.execute(
-      'CREATE INDEX idx_bookmarks_surah ON bookmarks(surah_number)',
+      'CREATE INDEX IF NOT EXISTS idx_bookmarks_surah ON bookmarks(surah_number)',
     );
     await db.execute(
-      'CREATE INDEX idx_monthly_date ON monthly_prayer_cache(year, month)',
+      'CREATE INDEX IF NOT EXISTS idx_monthly_date ON monthly_prayer_cache(year, month)',
     );
 
     // Hadith books table
     await db.execute('''
-      CREATE TABLE hadith_books (
+      CREATE TABLE IF NOT EXISTS hadith_books (
         book_id TEXT PRIMARY KEY,
         lang TEXT NOT NULL,
         downloaded_at INTEGER NOT NULL
@@ -254,7 +299,7 @@ class DatabaseService {
 
     // Hadiths table
     await db.execute('''
-      CREATE TABLE hadiths (
+      CREATE TABLE IF NOT EXISTS hadiths (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         book_id TEXT NOT NULL,
         hadith_number INTEGER,
@@ -266,11 +311,11 @@ class DatabaseService {
         FOREIGN KEY(book_id) REFERENCES hadith_books(book_id)
       )
     ''');
-    await db.execute('CREATE INDEX idx_hadiths_book ON hadiths(book_id)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_hadiths_book ON hadiths(book_id)');
 
     // ── FTS5 full-text search (guaranteed by bundled SQLite via FFI) ──
     await db.execute('''
-      CREATE VIRTUAL TABLE hadiths_fts USING fts5(
+      CREATE VIRTUAL TABLE IF NOT EXISTS hadiths_fts USING fts5(
         search_arabic, search_english,
         tokenize='unicode61 remove_diacritics 2'
       )
@@ -284,7 +329,7 @@ class DatabaseService {
 
     // Prayer Tracker
     await db.execute('''
-      CREATE TABLE prayer_tracker (
+      CREATE TABLE IF NOT EXISTS prayer_tracker (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         date TEXT UNIQUE NOT NULL,
         fajr INTEGER DEFAULT 0,
@@ -295,10 +340,10 @@ class DatabaseService {
       )
     ''');
     await db.execute(
-      'CREATE INDEX idx_prayer_tracker_date ON prayer_tracker(date)',
+      'CREATE INDEX IF NOT EXISTS idx_prayer_tracker_date ON prayer_tracker(date)',
     );
     await db.execute('''
-      CREATE TABLE hadith_translations (
+      CREATE TABLE IF NOT EXISTS hadith_translations (
         text_hash TEXT PRIMARY KEY,
         source_text TEXT NOT NULL,
         translated_text TEXT NOT NULL,
@@ -306,7 +351,28 @@ class DatabaseService {
         created_at INTEGER NOT NULL
       )
     ''');
+
+
   }
+
+
+  static Future<bool> _ensureColumnExists(
+    Database db,
+    String table,
+    String column,
+    String declaration,
+  ) async {
+    final columns = await db.rawQuery('PRAGMA table_info("$table")');
+    if (columns.any((row) => row['name'] == column)) return false;
+    await db.execute(
+      'ALTER TABLE "$table" ADD COLUMN "$column" $declaration',
+    );
+    return true;
+  }
+
+  @visibleForTesting
+  static Future<void> ensureSchemaForTesting(Database db) =>
+      _onCreate(db, _version);
 
   static Future<void> _onUpgrade(
     Database db,

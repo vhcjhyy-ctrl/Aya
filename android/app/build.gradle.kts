@@ -38,7 +38,7 @@ android {
 
     defaultConfig {
         applicationId = "com.ahmed.qalammuslim"
-        minSdk = flutter.minSdkVersion // Android 5.0
+        minSdk = 26 // Local llama.cpp inference requires Android 8.0+.
         targetSdk = 36 // Android 16
         versionCode = flutter.versionCode
         versionName = flutter.versionName
