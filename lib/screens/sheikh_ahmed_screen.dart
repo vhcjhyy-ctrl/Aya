@@ -840,19 +840,28 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           _recognized = recognized;
         });
         unawaited(_handleAssistantInput(recognized));
+        return;
       } catch (error) {
         if (!mounted || !_assistantConversationActive) return;
-        _assistantFinalResultHandled = true;
+        if (!_speechReady) {
+          _assistantFinalResultHandled = true;
+          setState(() {
+            _assistantListening = false;
+            _listening = false;
+            _status = 'تعذّر التعرف الصوتي المحلي: $error';
+          });
+          await _assistantSpeakAndListen(
+            'تعذّر التقاط الكلام. تأكد من إذن الميكروفون ثم حاول مرة أخرى.',
+          );
+          return;
+        }
+        _assistantFinalResultHandled = false;
         setState(() {
           _assistantListening = false;
           _listening = false;
-          _status = 'تعذّر التعرف الصوتي المحلي: $error';
+          _status = 'تعذّر الالتقاط المحلي؛ أنتقل إلى خدمة التعرف في الهاتف.';
         });
-        await _assistantSpeakAndListen(
-          'تعذّر التقاط الكلام. تأكد من إذن الميكروفون ثم حاول مرة أخرى.',
-        );
       }
-      return;
     }
     if (!_speechReady) return;
     try {
@@ -2015,15 +2024,23 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             _status = 'اكتملت المقارنة اللفظية محليًا. راجع الكلمات أدناه.';
           });
         }
+        return;
       } catch (error) {
         if (!mounted) return;
+        if (!_speechReady) {
+          setState(() {
+            _listening = false;
+            _assistantListening = false;
+            _status = 'تعذّر تحليل التلاوة محليًا: $error';
+          });
+          return;
+        }
         setState(() {
           _listening = false;
           _assistantListening = false;
-          _status = 'تعذّر تحليل التلاوة محليًا: $error';
+          _status = 'تعذّر التسجيل المحلي؛ سأحاول بخدمة التعرف الصوتي في الهاتف.';
         });
       }
-      return;
     }
 
     if (!_speechReady) {
@@ -2100,14 +2117,22 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           _listening = false;
         });
         await _handleVoiceCommand(recognized);
+        return;
       } catch (error) {
-        _commandMode = false;
-        if (mounted) setState(() {
+        if (!mounted) return;
+        if (!_speechReady) {
+          _commandMode = false;
+          setState(() {
+            _listening = false;
+            _status = 'تعذّر تحليل الأمر الصوتي محليًا: $error';
+          });
+          return;
+        }
+        setState(() {
           _listening = false;
-          _status = 'تعذّر تحليل الأمر الصوتي محليًا: $error';
+          _status = 'تعذّر التقاط الأمر محليًا؛ سأستخدم التعرف الصوتي في الهاتف.';
         });
       }
-      return;
     }
 
     if (!_speechReady) {
