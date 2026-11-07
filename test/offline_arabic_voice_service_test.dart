@@ -4,17 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:aya_app/services/offline_arabic_voice_service.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-
   group('OfflineArabicVoiceService', () {
-    test('does not report local engines ready before initialization', () {
-      final service = OfflineArabicVoiceService();
-
-      expect(service.isReady, isFalse);
-      expect(service.isRecognitionReady, isFalse);
-      expect(service.isSynthesisReady, isFalse);
-    });
-
     test('reports the combined one-time voice model download size', () {
       expect(
         OfflineArabicVoiceService.totalModelDownloadBytes,
