@@ -42,6 +42,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
   final AudioPlayer _player = AudioPlayer();
+  final TextEditingController _assistantInputController = TextEditingController();
   StreamSubscription<dynamic>? _playerErrorSubscription;
   String _activePlayerUse = '';
 
@@ -760,6 +761,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   Future<void> _assistantSpeakAndListen(
     String message, {
     bool rememberInModelHistory = true,
+    bool continueListening = true,
   }) async {
     if (!_assistantConversationActive) return;
     _lastAssistantMessage = message;
@@ -768,7 +770,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       _rememberAssistantMessage('assistant', message);
     }
     await _assistantSpeak(message);
-    if (_assistantConversationActive) {
+    if (_assistantConversationActive && continueListening) {
       await _listenForAssistantReply();
     }
   }
@@ -1152,6 +1154,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   Future<void> _assistantDiscuss({
     required String followUp,
+    bool continueListening = true,
   }) async {
     const systemPrompt = '''
 أنت المساعد الصوتي المحلي لتطبيق قلم مسلم. تخاطب المستخدم باحترام وتناديه عند الحاجة: المهندس أحمد محمد.
@@ -1187,7 +1190,64 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     if (reply.isEmpty) {
       reply = 'أنا معك. هل نتابع الحفظ أم تريد أن نتحدث قليلًا عن خطتك؟';
     }
-    await _assistantSpeakAndListen(reply);
+    await _assistantSpeakAndListen(
+      reply,
+      continueListening: continueListening,
+    );
+  }
+
+  Future<void> _sendTypedAssistantMessage() async {
+    final message = _assistantInputController.text.trim();
+    if (message.isEmpty) return;
+    if (!_assistantReady) {
+      _toast('جهّز المساعد أولًا من زر تنزيل وتجهيز المساعد الصوتي.');
+      return;
+    }
+
+    _assistantInputController.clear();
+    await _offlineArabicVoice.stopListening();
+    await _speech.stop();
+    if (!mounted) return;
+
+    if (!_assistantConversationActive) {
+      _assistantHistory.clear();
+      _assistantSessionStartedAt = DateTime.now();
+      _assistantTurnCount = 0;
+      _assistantConversationActive = true;
+      _assistantPhase = _AssistantPhase.idle;
+    } else if (_assistantPhase == _AssistantPhase.reciting) {
+      _assistantPhase = _AssistantPhase.awaitingFeedback;
+    }
+
+    _assistantListening = false;
+    _assistantFinalResultHandled = true;
+    _assistantTurnCount++;
+    setState(() {
+      _listening = false;
+      _assistantSpeaking = false;
+      _status = 'رسالة مكتوبة — جارٍ إعداد الرد...';
+    });
+    _addAssistantTranscript('user', message);
+    _rememberAssistantMessage('user', message);
+
+    final command = QuranVoiceIntent.parseCommand(message);
+    if (command != QuranVoiceCommand.unknown) {
+      await _handleVoiceCommand(message);
+      return;
+    }
+
+    await _assistantDiscuss(
+      followUp:
+          'أرسل المستخدم رسالة نصية بدل الكلام: "$message". أجب مباشرة عن سؤاله بالعربية، ولا تبدأ الاستماع إلى الميكروفون بعد الرد.',
+      continueListening: false,
+    );
+    if (mounted) {
+      setState(() {
+        _assistantListening = false;
+        _listening = false;
+        _status = 'يمكنك كتابة سؤال آخر أو بدء الحوار الصوتي.';
+      });
+    }
   }
 
   Future<void> _stopVoiceAssistant() async {
@@ -1632,6 +1692,42 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                   if (!_listening) unawaited(_startVoiceCommand());
                 }),
               ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _assistantInputController,
+              textInputAction: TextInputAction.send,
+              minLines: 1,
+              maxLines: 3,
+              enabled: !_assistantBusy,
+              onSubmitted: (_) => _sendTypedAssistantMessage(),
+              decoration: InputDecoration(
+                hintText: 'اكتب سؤالك للمساعد...',
+                prefixIcon: const Icon(Icons.edit_note_rounded),
+                suffixIcon: IconButton(
+                  tooltip: 'إرسال الرسالة',
+                  onPressed: _assistantBusy ? null : _sendTypedAssistantMessage,
+                  icon: const Icon(Icons.send_rounded),
+                ),
+                filled: true,
+                fillColor: scheme.surfaceContainerHighest,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: scheme.outlineVariant),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: scheme.outlineVariant),
+                ),
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              'يمكنك استخدام الكتابة عند تعذّر الميكروفون. الرد الصوتي يتحكم به من الإعدادات.',
+              style: TextStyle(
+                color: scheme.onSurfaceVariant,
+                fontSize: 10,
+              ),
             ),
             if (_assistantTranscript.isNotEmpty) ...[
               const Divider(height: 24),
@@ -2271,6 +2367,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     unawaited(_localAssistant.cancelDownload());
     _speech.cancel();
     _tts.stop();
+    _assistantInputController.dispose();
     unawaited(_playerErrorSubscription?.cancel());
     _player.dispose();
     unawaited(_localAssistant.dispose());
