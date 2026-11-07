@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:aya_app/services/offline_arabic_voice_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('OfflineArabicVoiceService', () {
     test('does not report local engines ready before initialization', () {
       final service = OfflineArabicVoiceService();
