@@ -2102,44 +2102,58 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _handleVoiceCommand(String rawCommand) async {
-    final command = rawCommand
-        .replaceAll('أ', 'ا')
-        .replaceAll('إ', 'ا')
-        .replaceAll('آ', 'ا')
-        .replaceAll('ى', 'ي')
-        .trim()
-        .toLowerCase();
+    final command = rawCommand.trim();
     if (command.isEmpty) {
       _toast('لم ألتقط أمرًا واضحًا. حاول مرة أخرى.');
       return;
     }
-    if (command.contains('التالي') || command.contains('بعدها')) {
-      await _move(1);
-      return;
+
+    switch (QuranVoiceIntent.parseCommand(command)) {
+      case QuranVoiceCommand.next:
+        await _move(1);
+        return;
+      case QuranVoiceCommand.previous:
+        await _move(-1);
+        return;
+      case QuranVoiceCommand.repeat:
+        await _playReference();
+        return;
+      case QuranVoiceCommand.hideAyah:
+        setState(() => _showText = false);
+        await _announce('أخفيت نص الآية. ابدأ التسميع من حفظك.');
+        return;
+      case QuranVoiceCommand.showAyah:
+        setState(() => _showText = true);
+        await _announce('أظهرت نص الآية.');
+        return;
+      case QuranVoiceCommand.start:
+        await _start();
+        return;
+      case QuranVoiceCommand.stop:
+        if (_assistantConversationActive) {
+          await _stopVoiceAssistant();
+        } else {
+          await _stop();
+        }
+        return;
+      case QuranVoiceCommand.pauseRecitation:
+        await _stop();
+        await _announce('أوقفت الاستماع مؤقتًا. يمكنك المتابعة عندما تكون مستعدًا.');
+        return;
+      case QuranVoiceCommand.markMemorized:
+        await _memorized();
+        await _announce('سجلت الآية في خطة الحفظ.');
+        return;
+      case QuranVoiceCommand.needsReview:
+        await _needsReview();
+        await _announce('سجلت الآية للمراجعة القادمة.');
+        return;
+      case QuranVoiceCommand.unknown:
+        await _announce(
+          'لم أفهم الأمر. يمكنك قول التالي، السابق، كرر التلاوة، أخف الآية، أظهر الآية، ابدأ التسميع، احفظها، أو سجلها للمراجعة.',
+        );
+        return;
     }
-    if (command.contains('السابق') || command.contains('قبل')) {
-      await _move(-1);
-      return;
-    }
-    if (command.contains('كرر') || command.contains('اعاده') || command.contains('استمع') || command.contains('شغل')) {
-      await _playReference();
-      return;
-    }
-    if (command.contains('اخف') || command.contains('اخفي')) {
-      setState(() => _showText = false);
-      await _announce('أخفيت نص الآية. ابدأ التسميع من حفظك.');
-      return;
-    }
-    if (command.contains('اظهر') || command.contains('اعرض')) {
-      setState(() => _showText = true);
-      await _announce('أظهرت نص الآية.');
-      return;
-    }
-    if (command.contains('ابدأ') || command.contains('سمع') || command.contains('تسميع')) {
-      await _start();
-      return;
-    }
-    await _announce('لم أفهم الأمر. قل التالي، السابق، كرر، أظهر الآية، أخف الآية، أو ابدأ التسميع.');
   }
 
   Future<void> _announce(String message) async {
