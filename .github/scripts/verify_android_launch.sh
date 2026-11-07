@@ -9,6 +9,7 @@ mkdir -p dist
 
 collect_diagnostics() {
   adb shell dumpsys activity activities > dist/activities-after-launch.txt 2>&1 || true
+  adb shell dumpsys window windows > dist/window-after-launch.txt 2>&1 || true
   adb logcat -d -v time -t 5000 > dist/android-launch-log.txt 2>&1 || true
 }
 
@@ -44,9 +45,15 @@ echo "$PID" | tee dist/process-id.txt
 sleep 15
 collect_diagnostics
 adb exec-out screencap -p > dist/launch-screen.png
+test -s dist/launch-screen.png
 
 if ! grep -q "com.quran.aya.MainActivity" dist/activities-after-launch.txt; then
   echo "Qalam Muslim MainActivity is not visible in the activity stack."
+  exit 1
+fi
+
+if ! grep -E "mCurrentFocus|mFocusedApp" dist/window-after-launch.txt | grep -q "$APP_ID"; then
+  echo "Qalam Muslim does not own the foreground window after launch."
   exit 1
 fi
 
@@ -55,4 +62,4 @@ if grep -E "FATAL EXCEPTION|Process: ${APP_ID}" dist/android-launch-log.txt; the
   exit 1
 fi
 
-echo "PASS: application installed, launched, and remained alive on Android 11."
+echo "PASS: application installed, launched, remained alive, and owned the foreground window on Android 11."
