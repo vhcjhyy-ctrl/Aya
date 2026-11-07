@@ -59,10 +59,10 @@ class KhatmahPlan {
         'completedDays': completedDays,
       };
 
-  int get totalPages => max(1, 605 - startPage);
-  int get pagesPerDay => max(1, (totalPages / durationDays).ceil());
+  int get totalPages => max(1, 605 - startPage).toInt();
+  int get pagesPerDay => max(1, (totalPages / durationDays).ceil()).toInt();
   int get completedCount => completedDays.length;
-  int get remainingSessions => max(0, durationDays - completedCount);
+  int get remainingSessions => max(0, durationDays - completedCount).toInt();
   double get progress => (completedCount / durationDays).clamp(0.0, 1.0).toDouble();
   DateTime get beginsOn => DateTime.parse(startDate);
 
@@ -77,12 +77,12 @@ class KhatmahPlan {
 
   int pageStartForDay(int day) {
     final safeDay = day.clamp(1, durationDays).toInt();
-    return min(604, startPage + (safeDay - 1) * pagesPerDay);
+    return min(604, startPage + (safeDay - 1) * pagesPerDay).toInt();
   }
 
   int pageEndForDay(int day) {
     final first = pageStartForDay(day);
-    return min(604, first + pagesPerDay - 1);
+    return min(604, first + pagesPerDay - 1).toInt();
   }
 
   KhatmahPlan setDayCompleted(int day, bool completed) {
@@ -219,10 +219,10 @@ class QadaaTrackerState {
       prayerKeys.fold(0, (sum, key) => sum + completedForPrayer(key));
 
   int remainingForPrayer(String key) =>
-      max(0, (prayerOwed[key] ?? 0) - (prayerCompleted[key] ?? 0));
+      max(0, (prayerOwed[key] ?? 0) - (prayerCompleted[key] ?? 0)).toInt();
 
   int completedForPrayer(String key) => prayerCompleted[key] ?? 0;
-  int get remainingFasts => max(0, fastsOwed - fastsCompleted);
+  int get remainingFasts => max(0, fastsOwed - fastsCompleted).toInt();
 
   QadaaTrackerState addPrayerDebt(String key, int count) {
     if (!prayerKeys.contains(key) || count <= 0) return this;
