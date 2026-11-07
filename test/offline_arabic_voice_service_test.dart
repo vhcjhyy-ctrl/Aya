@@ -5,6 +5,14 @@ import 'package:aya_app/services/offline_arabic_voice_service.dart';
 
 void main() {
   group('OfflineArabicVoiceService', () {
+    test('does not report local engines ready before initialization', () {
+      final service = OfflineArabicVoiceService();
+
+      expect(service.isReady, isFalse);
+      expect(service.isRecognitionReady, isFalse);
+      expect(service.isSynthesisReady, isFalse);
+    });
+
     test('encodes mono PCM16 WAV with a valid RIFF header', () {
       final wav = OfflineArabicVoiceService.encodePcm16Wav(
         Float32List.fromList([0.0, 0.5, -0.5, 1.0]),
