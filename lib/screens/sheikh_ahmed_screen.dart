@@ -851,7 +851,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             _status = 'تعذّر التعرف الصوتي المحلي: $error';
           });
           await _assistantSpeakAndListen(
-            'تعذّر التقاط الكلام. تأكد من إذن الميكروفون ثم حاول مرة أخرى.',
+            'تعذّر التقاط الكلام. تأكد من إذن الميكروفون ثم اضغط استمع مجددًا للمحاولة.',
+            continueListening: false,
           );
           return;
         }
