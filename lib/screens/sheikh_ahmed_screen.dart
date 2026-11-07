@@ -1442,7 +1442,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   Future<void> _announce(String message) async {
     _toast(message);
-    if (_ttsReady) {
+    if (_offlineArabicVoice.isSynthesisReady) {
+      await _assistantSpeak(message);
+    } else if (_ttsReady) {
       await _tts.stop();
       await _tts.speak(message);
     }
@@ -1838,7 +1840,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                   Text(_status, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color)),
                   const SizedBox(height: 12),
                   FilledButton.icon(
-                    onPressed: _listening ? _stop : (_speechReady ? _start : null),
+                    onPressed: _listening ? _stop : ((_speechReady || _offlineArabicVoice.isRecognitionReady) ? _start : null),
                     icon: Icon(_listening ? Icons.stop_circle_outlined : Icons.mic_rounded),
                     label: Text(_listening ? 'إيقاف الاستماع' : 'ابدأ التسميع'),
                     style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
