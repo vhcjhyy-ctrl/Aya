@@ -32,7 +32,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.4'
+          flutter-version: '3.44.9'
           channel: stable
           cache: true
 
@@ -40,7 +40,6 @@ jobs:
         run: flutter pub get
 
       - name: Analyze Dart source
-        continue-on-error: true
         run: flutter analyze --no-pub
 
       - name: Run Flutter tests
@@ -59,6 +58,340 @@ jobs:
           grep -q "package: name='com.ahmed.qalammuslim'" dist/apk-badging.txt
           grep -q "application-icon" dist/apk-badging.txt
           test -s dist/qalam-muslim-arm64-release.apk
+          unzip -l dist/qalam-muslim-arm64-release.apk | tee dist/arm64-apk-contents.txt
+          grep -Eq 'lib/arm64-v8a/libapp\.so
+
+      - name: Upload ARM64 release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-arm64-release
+          path: |
+            dist/qalam-muslim-arm64-release.apk
+            dist/apk-badging.txt
+            dist/arm64-apk-contents.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build x86_64 release for emulator
+        run: |
+          # The Flutter Android flavor build can reuse stale ABI outputs.
+          # Start from a clean build graph before producing the emulator APK.
+          flutter clean
+          flutter pub get
+          flutter build apk --flavor fdroid --release --target-platform android-x64
+          cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
+
+      - name: Verify x86_64 Flutter AOT libraries
+        run: |
+          unzip -l dist/qalam-muslim-x86_64-release.apk | tee dist/x86_64-apk-contents.txt
+          grep -Eq 'lib/x86_64/libapp\.so
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
+          script: |
+            bash .github/scripts/verify_android_launch.sh
+
+      - name: Upload Android launch diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-android-launch-diagnostics
+          path: |
+            dist/launch-result.txt
+            dist/process-id.txt
+            dist/activities-after-launch.txt
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
+          retention-days: 14
+ dist/arm64-apk-contents.txt
+          grep -Eq 'lib/arm64-v8a/libflutter\.so
+
+      - name: Upload ARM64 release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-arm64-release
+          path: |
+            dist/qalam-muslim-arm64-release.apk
+            dist/apk-badging.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build x86_64 release for emulator
+        run: |
+          flutter build apk --flavor fdroid --release --target-platform android-x64
+          cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
+
+      - name: Install and launch on Android 11 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
+          script: |
+            bash .github/scripts/verify_android_launch.sh
+
+      - name: Upload Android launch diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-android-launch-diagnostics
+          path: |
+            dist/launch-result.txt
+            dist/process-id.txt
+            dist/activities-after-launch.txt
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
+          retention-days: 14
+ dist/arm64-apk-contents.txt
+
+      - name: Upload ARM64 release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-arm64-release
+          path: |
+            dist/qalam-muslim-arm64-release.apk
+            dist/apk-badging.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build x86_64 release for emulator
+        run: |
+          flutter build apk --flavor fdroid --release --target-platform android-x64
+          cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
+
+      - name: Install and launch on Android 11 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
+          script: |
+            bash .github/scripts/verify_android_launch.sh
+
+      - name: Upload Android launch diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-android-launch-diagnostics
+          path: |
+            dist/launch-result.txt
+            dist/process-id.txt
+            dist/activities-after-launch.txt
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
+          retention-days: 14
+ dist/x86_64-apk-contents.txt
+          grep -Eq 'lib/x86_64/libflutter\.so
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
+          script: |
+            bash .github/scripts/verify_android_launch.sh
+
+      - name: Upload Android launch diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-android-launch-diagnostics
+          path: |
+            dist/launch-result.txt
+            dist/process-id.txt
+            dist/activities-after-launch.txt
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
+          retention-days: 14
+ dist/arm64-apk-contents.txt
+          grep -Eq 'lib/arm64-v8a/libflutter\.so
+
+      - name: Upload ARM64 release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-arm64-release
+          path: |
+            dist/qalam-muslim-arm64-release.apk
+            dist/apk-badging.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build x86_64 release for emulator
+        run: |
+          flutter build apk --flavor fdroid --release --target-platform android-x64
+          cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
+
+      - name: Install and launch on Android 11 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
+          script: |
+            bash .github/scripts/verify_android_launch.sh
+
+      - name: Upload Android launch diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-android-launch-diagnostics
+          path: |
+            dist/launch-result.txt
+            dist/process-id.txt
+            dist/activities-after-launch.txt
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
+          retention-days: 14
+ dist/arm64-apk-contents.txt
+
+      - name: Upload ARM64 release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-arm64-release
+          path: |
+            dist/qalam-muslim-arm64-release.apk
+            dist/apk-badging.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build x86_64 release for emulator
+        run: |
+          flutter build apk --flavor fdroid --release --target-platform android-x64
+          cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
+
+      - name: Install and launch on Android 11 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
+          script: |
+            bash .github/scripts/verify_android_launch.sh
+
+      - name: Upload Android launch diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-android-launch-diagnostics
+          path: |
+            dist/launch-result.txt
+            dist/process-id.txt
+            dist/activities-after-launch.txt
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
+          retention-days: 14
+ dist/x86_64-apk-contents.txt
+
+      - name: Install and launch on Android 11 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
+          script: |
+            bash .github/scripts/verify_android_launch.sh
+
+      - name: Upload Android launch diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-android-launch-diagnostics
+          path: |
+            dist/launch-result.txt
+            dist/process-id.txt
+            dist/activities-after-launch.txt
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
+          retention-days: 14
+ dist/arm64-apk-contents.txt
+          grep -Eq 'lib/arm64-v8a/libflutter\.so
+
+      - name: Upload ARM64 release APK
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-arm64-release
+          path: |
+            dist/qalam-muslim-arm64-release.apk
+            dist/apk-badging.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Build x86_64 release for emulator
+        run: |
+          flutter build apk --flavor fdroid --release --target-platform android-x64
+          cp build/app/outputs/flutter-apk/app-fdroid-release.apk dist/qalam-muslim-x86_64-release.apk
+
+      - name: Install and launch on Android 11 emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          target: default
+          arch: x86_64
+          profile: pixel_2
+          cores: 4
+          emulator-boot-timeout: 900
+          disable-animations: true
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -no-snapshot -wipe-data -memory 4096
+          script: |
+            bash .github/scripts/verify_android_launch.sh
+
+      - name: Upload Android launch diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: qalam-muslim-android-launch-diagnostics
+          path: |
+            dist/launch-result.txt
+            dist/process-id.txt
+            dist/activities-after-launch.txt
+            dist/launch-screen.png
+            dist/android-launch-log.txt
+          if-no-files-found: ignore
+          retention-days: 14
+ dist/arm64-apk-contents.txt
 
       - name: Upload ARM64 release APK
         uses: actions/upload-artifact@v6
