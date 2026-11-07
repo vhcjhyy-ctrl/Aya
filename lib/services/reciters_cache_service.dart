@@ -30,12 +30,17 @@ class RecitersCacheService {
   /// Return reciters whose moshaf list includes entries matching [riwayahId],
   /// loading from disk cache or network on first call.
   /// Results are deduplicated by reciter name.
-  static final Map<int, List<Map<String, dynamic>>> _riwayahCache = {};
+  static final Map<String, List<Map<String, dynamic>>> _riwayahCache = {};
 
   static Future<List<Map<String, dynamic>>> getRecitersForRiwayah(
-    int riwayahId,
-  ) async {
-    final cached = _riwayahCache[riwayahId];
+    int riwayahId, {
+    int? surahNumber,
+  }) async {
+    if (surahNumber != null && (surahNumber < 1 || surahNumber > 114)) {
+      throw RangeError.range(surahNumber, 1, 114, 'surahNumber');
+    }
+    final cacheKey = '${riwayahId}:${surahNumber ?? 0}';
+    final cached = _riwayahCache[cacheKey];
     if (cached != null) {
       return List<Map<String, dynamic>>.from(cached);
     }
@@ -44,9 +49,12 @@ class RecitersCacheService {
     final client = http.Client();
     try {
       final lang = TranslationService.isArabic ? 'ar' : 'eng';
-      final uri = Uri.parse(
-        'https://mp3quran.net/api/v3/reciters?language=$lang&rewaya=$riwayahId',
-      );
+      final query = <String, String>{
+        'language': lang,
+        'rewaya': riwayahId.toString(),
+        if (surahNumber != null) 'sura': surahNumber.toString(),
+      };
+      final uri = Uri.https('mp3quran.net', '/api/v3/reciters', query);
       final response = await client.get(uri).timeout(
         const Duration(seconds: 15),
       );
@@ -59,13 +67,41 @@ class RecitersCacheService {
 
       final payload = jsonDecode(utf8.decode(response.bodyBytes))
           as Map<String, dynamic>;
-      final result = parseRecitersForRiwayah(payload, riwayahId);
-      _riwayahCache[riwayahId] = result;
+      final parsed = parseRecitersForRiwayah(payload, riwayahId);
+      final result = surahNumber == null
+          ? parsed
+          : filterRecitersForSurah(parsed, surahNumber);
+      _riwayahCache[cacheKey] = result;
       return List<Map<String, dynamic>>.from(result);
     } finally {
       client.close();
       loadingNotifier.value = false;
     }
+  }
+
+  /// Keep only reciters with a catalogued recording for [surahNumber].
+  /// The API's `sura` parameter reduces the response; this local filter
+  /// protects the picker if a server returns a wider catalogue.
+  @visibleForTesting
+  static List<Map<String, dynamic>> filterRecitersForSurah(
+    Iterable<Map<String, dynamic>> reciters,
+    int surahNumber,
+  ) {
+    final result = <Map<String, dynamic>>[];
+    for (final reciter in reciters) {
+      final rawMoshafs = reciter['moshaf'] as List? ?? const [];
+      final matchingMoshafs = rawMoshafs
+          .where((raw) => raw is Map &&
+              moshafHasSurah(Map<String, dynamic>.from(raw), surahNumber))
+          .map((raw) => Map<String, dynamic>.from(raw as Map))
+          .toList();
+      if (matchingMoshafs.isEmpty) continue;
+      result.add({
+        ...reciter,
+        'moshaf': matchingMoshafs,
+      });
+    }
+    return result;
   }
 
   /// Parse the response from the MP3Quran endpoint already filtered by
