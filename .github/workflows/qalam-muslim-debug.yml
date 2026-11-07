@@ -111,6 +111,7 @@ jobs:
             dist/launch-result.txt
             dist/process-id.txt
             dist/activities-after-launch.txt
+            dist/window-after-launch.txt
             dist/launch-screen.png
             dist/android-launch-log.txt
           if-no-files-found: ignore
