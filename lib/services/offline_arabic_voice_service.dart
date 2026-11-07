@@ -54,6 +54,8 @@ class OfflineArabicVoiceService {
   bool _cancelDownloadRequested = false;
 
   bool get isReady => _ready;
+  bool get isRecognitionReady => !_disposed && _recognizer != null;
+  bool get isSynthesisReady => !_disposed && _tts != null;
   bool get isListening => _isListening;
 
   Future<void> initialize({
