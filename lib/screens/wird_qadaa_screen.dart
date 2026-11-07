@@ -47,7 +47,7 @@ class _WirdQadaaScreenState extends State<WirdQadaaScreen>
     _tabs = TabController(
       length: 2,
       vsync: this,
-      initialIndex: widget.initialTab.clamp(0, 1),
+      initialIndex: widget.initialTab.clamp(0, 1).toInt(),
     );
     _loadLocalState();
   }
@@ -381,7 +381,7 @@ class _WirdQadaaScreenState extends State<WirdQadaaScreen>
                           ),
                           Center(
                             child: Text(
-                              plan.progress * 100.round() .toString() + '%',
+                              (plan.progress * 100).round().toString() + '%',
                               style: theme.textTheme.titleMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
