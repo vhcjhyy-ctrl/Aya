@@ -121,6 +121,35 @@ class RecitersCacheService {
     return result;
   }
 
+  /// Whether a moshaf publishes the requested surah.
+  ///
+  /// MP3Quran includes [surah_list] as a comma-separated list. This matters
+  /// because some reciters have recordings for only a subset of the Quran.
+  @visibleForTesting
+  static bool moshafHasSurah(
+    Map<String, dynamic> moshaf,
+    int surahNumber,
+  ) {
+    if (surahNumber < 1 || surahNumber > 114) return false;
+
+    final rawList = moshaf['surah_list'];
+    if (rawList is String && rawList.trim().isNotEmpty) {
+      return rawList
+          .split(',')
+          .any((value) => int.tryParse(value.trim()) == surahNumber);
+    }
+
+    if (rawList is List && rawList.isNotEmpty) {
+      return rawList.any(
+        (value) => int.tryParse(value.toString().trim()) == surahNumber,
+      );
+    }
+
+    // Older API/cache rows may omit surah_list. Keep unknown rows available
+    // rather than hiding a reciter whose catalogue metadata is incomplete.
+    return true;
+  }
+
   /// Filter a riwayah before deduplicating names so another API row
   /// for the same reciter cannot hide a matching recording.
   @visibleForTesting

@@ -78,6 +78,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
 
   Ayah? get _ayah => _ayahs.isEmpty ? null : _ayahs[_index];
+  List<Map<String, dynamic>> get _availableReferenceReciters =>
+      _referenceReciters
+          .where((source) => RecitersCacheService.moshafHasSurah(source, _surah))
+          .toList();
   String get _recordKey => _surah.toString() + ':' + (_ayah?.numberInSurah.toString() ?? '0');
 
   @override
@@ -114,6 +118,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             'name': (reciter['name'] ?? '').toString(),
             'moshaf_name': (moshaf['name'] ?? '').toString(),
             'server': server,
+            'surah_list': moshaf['surah_list'],
+            'surah_total': moshaf['surah_total'],
           });
         }
       }
@@ -126,14 +132,21 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         );
       });
 
+      final availableSources = sources
+          .where((source) => RecitersCacheService.moshafHasSurah(source, _surah))
+          .toList();
       final savedServer = widget.storage.getString(
         'hifz_reference_reciter',
         defaultValue: '',
       );
-      final servers = sources.map((source) => source['server'] as String).toSet();
+      final servers = availableSources
+          .map((source) => source['server'] as String)
+          .toSet();
       final selected = servers.contains(savedServer)
           ? savedServer
-          : (sources.isNotEmpty ? sources.first['server'] as String : '');
+          : (availableSources.isNotEmpty
+              ? availableSources.first['server'] as String
+              : '');
 
       if (selected.isNotEmpty && selected != savedServer) {
         await widget.storage.setString('hifz_reference_reciter', selected);
@@ -305,11 +318,11 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   Future<void> _prepareVoiceAssistant() async {
     if (_assistantBusy) return;
-    if (!_speechReady || !_ttsReady) {
-      _toast('تأكد من جاهزية الميكروفون والصوت العربي في الهاتف أولًا.');
-      return;
-    }
     if (_assistantReady) {
+      if (!_speechReady) {
+        _toast('المساعد جاهز. فعّل خدمة التعرف الصوتي العربية في الهاتف لبدء الحوار.');
+        return;
+      }
       await _startVoiceAssistant();
       return;
     }
@@ -340,10 +353,20 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       setState(() {
         _assistantReady = true;
         _assistantModelStatus = _localAssistant.gpuAccelerationEnabled
-          ? 'المساعد جاهز — تسريع GPU'
-          : 'المساعد جاهز — CPU';
+            ? 'المساعد جاهز — تسريع GPU'
+            : 'المساعد جاهز — CPU';
+        if (!_ttsReady) {
+          _assistantModelStatus += ' — النطق العربي غير متاح من الهاتف';
+        }
+        if (!_speechReady) {
+          _assistantModelStatus += ' — يلزم تفعيل التعرف الصوتي';
+        }
       });
-      await _startVoiceAssistant();
+      if (_speechReady) {
+        await _startVoiceAssistant();
+      } else {
+        _toast('تم تجهيز المساعد المحلي. فعّل خدمة التعرف الصوتي العربية ثم اضغط ابدأ الحوار.');
+      }
     } catch (error) {
       if (mounted) {
         final cancelled = error.toString().contains('أُلغي تنزيل نموذج المساعد');
@@ -963,6 +986,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         _index = found < 0 ? 0 : found;
         _loading = false;
       });
+      await _ensureSelectedReferenceReciterForSurah();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -1129,13 +1153,30 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     });
   }
 
+  Future<void> _ensureSelectedReferenceReciterForSurah() async {
+    final available = _availableReferenceReciters;
+    final isSelectedAvailable = available.any(
+      (source) => source['server'] == _selectedReciter,
+    );
+    if (isSelectedAvailable) return;
+
+    final next = available.isEmpty
+        ? ''
+        : available.first['server'] as String;
+    if (mounted) setState(() => _selectedReciter = next);
+    await widget.storage.setString('hifz_reference_reciter', next);
+  }
+
   Future<void> _playReference() async {
     final current = _ayah;
     if (current == null) return;
     await _speech.stop();
     await _tts.stop();
-    if (_selectedReciter.isEmpty) {
-      _toast('لم يتوفر قارئ مرجعي بعد. تحقق من الاتصال ثم أعد المحاولة.');
+    if (_selectedReciter.isEmpty ||
+        !_availableReferenceReciters.any(
+          (source) => source['server'] == _selectedReciter,
+        )) {
+      _toast('لا يتوفر لهذا القارئ تسجيل للسورة المختارة. اختر قارئًا آخر.');
       return;
     }
     final url = ApiService.buildSurahAudioUrl(
@@ -1373,16 +1414,23 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             icon: const Icon(Icons.refresh_rounded),
             label: const Text('تعذّر تحميل القراء — أعد المحاولة'),
           )
+        else if (_availableReferenceReciters.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text('لا توجد تسجيلات مرجعية متاحة لهذه السورة من القراء المحمّلين.'),
+          )
         else
           DropdownButtonFormField<String>(
-            value: _selectedReciter,
+            value: _availableReferenceReciters.any(
+              (source) => source['server'] == _selectedReciter,
+            ) ? _selectedReciter : null,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'اختر القارئ المرجعي',
-              helperText: 'مصادر تلاوة حقيقية من MP3Quran',
+              helperText: 'تظهر فقط التسجيلات المتاحة للسورة المختارة · MP3Quran',
               prefixIcon: Icon(Icons.record_voice_over_outlined),
             ),
-            items: _referenceReciters.map((source) {
+            items: _availableReferenceReciters.map((source) {
               final name = (source['name'] ?? '').toString();
               final moshaf = (source['moshaf_name'] ?? '').toString();
               final label = moshaf.isEmpty ? name : '$name · $moshaf';
