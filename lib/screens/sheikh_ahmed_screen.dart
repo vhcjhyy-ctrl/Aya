@@ -281,7 +281,28 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   Future<void> _initTts() async {
     try {
-      await _tts.setLanguage('ar-EG');
+      // Do not mark Android TTS ready just because setLanguage accepted
+      // a locale string: the device may not actually have an Arabic voice.
+      final dynamic rawLanguages = await _tts.getLanguages;
+      final installedLanguages = rawLanguages is List
+          ? rawLanguages.map((value) => value.toString()).toList()
+          : <String>[];
+      final arabicLanguages = installedLanguages
+          .where((value) => value.toLowerCase().startsWith('ar'))
+          .toList();
+
+      if (arabicLanguages.isEmpty) {
+        _ttsReady = false;
+        if (mounted) setState(() {});
+        return;
+      }
+
+      final arabicLocale = arabicLanguages.firstWhere(
+        (value) => value.toLowerCase() == 'ar-eg',
+        orElse: () => arabicLanguages.first,
+      );
+
+      await _tts.setLanguage(arabicLocale);
       await _tts.setSpeechRate(0.46);
       await _tts.setPitch(1.0);
       await _tts.awaitSpeakCompletion(true);
@@ -514,30 +535,39 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     StreamSubscription<void>? completionSubscription;
     Completer<void>? playbackCompleted;
     try {
+      // Prefer the bundled Sherpa-ONNX Arabic voice. Android's system TTS
+      // can report the ar-EG locale even when no Arabic voice is installed.
+      if (_offlineVoiceReady) {
+        try {
+          generatedFile = await _offlineArabicVoice.synthesizeToFile(message);
+          await _player.stop();
+          playbackCompleted = Completer<void>();
+          completionSubscription = _player.onPlayerComplete.listen((_) {
+            if (playbackCompleted != null &&
+                !playbackCompleted!.isCompleted) {
+              playbackCompleted!.complete();
+            }
+          });
+          await _player.play(DeviceFileSource(generatedFile));
+          final timeoutMilliseconds =
+              (message.length * 260).clamp(12000, 60000).toInt();
+          await playbackCompleted!.future.timeout(
+            Duration(milliseconds: timeoutMilliseconds),
+            onTimeout: () {},
+          );
+          return;
+        } catch (_) {
+          // Fall through to Android TTS only when its Arabic voice is verified.
+          if (!_ttsReady) rethrow;
+        }
+      }
+
       if (_ttsReady) {
         await _tts.stop();
         await _tts.speak(message);
         return;
       }
-      if (_offlineVoiceReady) {
-        generatedFile = await _offlineArabicVoice.synthesizeToFile(message);
-        await _player.stop();
-        playbackCompleted = Completer<void>();
-        completionSubscription = _player.onPlayerComplete.listen((_) {
-          if (playbackCompleted != null &&
-              !playbackCompleted!.isCompleted) {
-            playbackCompleted!.complete();
-          }
-        });
-        await _player.play(DeviceFileSource(generatedFile));
-        final timeoutMilliseconds =
-            (message.length * 260).clamp(12000, 60000).toInt();
-        await playbackCompleted!.future.timeout(
-          Duration(milliseconds: timeoutMilliseconds),
-          onTimeout: () {},
-        );
-        return;
-      }
+
       _toast(message);
     } catch (_) {
       _toast(message);
