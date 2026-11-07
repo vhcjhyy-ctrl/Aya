@@ -2,12 +2,12 @@ import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/offline_surahs.dart';
 import '../models/quran_models.dart';
@@ -322,8 +322,59 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     }
   }
 
+  Future<bool> _ensureSupertonicLicenseAccepted() async {
+    if (widget.storage.getBool('supertonic_openrail_m_accepted')) {
+      return true;
+    }
+    if (!mounted) return false;
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('ترخيص محرك الصوت العربي'),
+        content: SingleChildScrollView(
+          child: const Text(
+            'سيستخدم المساعد Supertonic 3 لتوليد الصوت العربي محليًا على الهاتف. '
+            'أوزان النموذج مرخّصة بموجب BigScience Open RAIL-M، وهو ترخيص يتضمن قيود استخدام ملزمة.\n\n'
+            'تتعهد بعدم استخدامه لمخالفة القانون، أو إيذاء القاصرين، أو نشر معلومات كاذبة بقصد الإضرار، '
+            'أو كشف بيانات شخصية للإضرار بالآخرين، أو التشهير والتحرش، أو انتحال صوت/هوية شخص دون موافقته، '
+            'أو التمييز والإضرار، أو القرارات الآلية ذات الأثر القانوني، أو تقديم نصائح ونتائج طبية، '
+            'أو استخدامه في قرارات إنفاذ القانون أو الهجرة أو اللجوء.\n\n'
+            'يجب كذلك الإفصاح عن المحتوى الصوتي المُنشأ آليًا عند نشره في سياق قد يلتبس فيه على المستمع. '
+            'الصوت الاصطناعي لا يمثل صوت شيخ أو قارئ بعينه.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => launchUrl(
+              Uri.parse('https://huggingface.co/Supertone/supertonic-3/blob/main/LICENSE'),
+              mode: LaunchMode.externalApplication,
+            ),
+            child: const Text('قراءة الترخيص كاملًا'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('رفض'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('أوافق وأتابع'),
+          ),
+        ],
+      ),
+    );
+    if (accepted != true) return false;
+    await widget.storage.setBool('supertonic_openrail_m_accepted', true);
+    return true;
+  }
+
   Future<void> _prepareVoiceAssistant() async {
     if (_assistantBusy) return;
+    if (!_offlineVoiceReady &&
+        !await _ensureSupertonicLicenseAccepted()) {
+      _toast('يجب قبول شروط استخدام نموذج الصوت قبل تنزيله.');
+      return;
+    }
     if (_assistantReady) {
       if (!_offlineVoiceReady) {
         try {

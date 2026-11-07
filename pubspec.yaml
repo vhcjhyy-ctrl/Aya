@@ -107,6 +107,7 @@ flutter:
     - assets/fonts/
     - assets/db/
     - assets/books/
+    - assets/licenses/
 
   fonts:
     - family: Amiri

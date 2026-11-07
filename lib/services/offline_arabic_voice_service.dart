@@ -13,25 +13,26 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 /// Offline Arabic speech recognition and speech synthesis for Qalam Muslim.
 ///
 /// ASR uses multilingual Whisper Tiny with Arabic transcription.
-/// TTS uses the MIT-licensed Piper Arabic Kareem voice.
+/// TTS uses Supertonic 3 in Arabic mode; its OpenRAIL-M use terms are
+/// displayed and accepted before model download.
 /// Models are downloaded on demand after the user enables the assistant.
 class OfflineArabicVoiceService {
   static const int _whisperArchiveBytes = 116204861;
-  static const int _piperArchiveBytes = 67177830;
-  static const String _piperArchiveSha256 =
-      '9ebbcea30e0fbd588f7b2cb45ee897d6aeb1bf5791cbc037a7b5a3f641e3dbce';
+  static const int _supertonicArchiveBytes = 128774318;
+  static const String _supertonicArchiveSha256 =
+      '82fa96f91c4ef8abaae3a14a3f4153facf88bed821d1f7331cec2700f432c427';
 
   static const String _whisperArchiveName =
       'sherpa-onnx-whisper-tiny.tar.bz2';
-  static const String _piperArchiveName =
-      'vits-piper-ar_JO-kareem-medium.tar.bz2';
+  static const String _supertonicArchiveName =
+      'sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2';
 
   static const String _whisperUrl =
       'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/'
       'sherpa-onnx-whisper-tiny.tar.bz2';
-  static const String _piperUrl =
+  static const String _supertonicUrl =
       'https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/'
-      'vits-piper-ar_JO-kareem-medium.tar.bz2';
+      'sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2';
 
   static const int _sampleRate = 16000;
   static const double _speechRmsThreshold = 0.012;
@@ -104,27 +105,31 @@ class OfflineArabicVoiceService {
       onProgress(0.62, 'محرك التعرف العربي موجود على الجهاز');
     }
 
-    final piperRoot = Directory(
-      p.join(models.path, 'vits-piper-ar_JO-kareem-medium'),
+    final supertonicRoot = Directory(
+      p.join(models.path, 'sherpa-onnx-supertonic-3-tts-int8-2026-05-11'),
     );
-    final piperFiles = [
-      File(p.join(piperRoot.path, 'ar_JO-kareem-medium.onnx')),
-      File(p.join(piperRoot.path, 'tokens.txt')),
-      File(p.join(piperRoot.path, 'espeak-ng-data', 'phontab')),
+    final supertonicFiles = [
+      File(p.join(supertonicRoot.path, 'duration_predictor.int8.onnx')),
+      File(p.join(supertonicRoot.path, 'text_encoder.int8.onnx')),
+      File(p.join(supertonicRoot.path, 'vector_estimator.int8.onnx')),
+      File(p.join(supertonicRoot.path, 'vocoder.int8.onnx')),
+      File(p.join(supertonicRoot.path, 'tts.json')),
+      File(p.join(supertonicRoot.path, 'unicode_indexer.bin')),
+      File(p.join(supertonicRoot.path, 'voice.bin')),
     ];
 
-    if (!await _allFilesExist(piperFiles)) {
-      onProgress(0.62, 'تنزيل الصوت العربي المحلي — Piper Kareem');
+    if (!await _allFilesExist(supertonicFiles)) {
+      onProgress(0.48, 'تنزيل الصوت العربي المحلي — Supertonic 3');
       await _downloadAndExtract(
-        url: _piperUrl,
-        archiveName: _piperArchiveName,
-        expectedBytes: _piperArchiveBytes,
-        expectedSha256: _piperArchiveSha256,
+        url: _supertonicUrl,
+        archiveName: _supertonicArchiveName,
+        expectedBytes: _supertonicArchiveBytes,
+        expectedSha256: _supertonicArchiveSha256,
         outputDirectory: models,
-        requiredFiles: piperFiles,
+        requiredFiles: supertonicFiles,
         onProgress: (value) => onProgress(
-          0.62 + value * 0.38,
-          'تنزيل الصوت العربي المحلي — Piper Kareem',
+          0.48 + value * 0.52,
+          'تنزيل الصوت العربي المحلي — Supertonic 3',
         ),
       );
     }
@@ -157,10 +162,14 @@ class OfflineArabicVoiceService {
     try {
       final ttsConfig = sherpa.OfflineTtsConfig(
         model: sherpa.OfflineTtsModelConfig(
-          vits: sherpa.OfflineTtsVitsModelConfig(
-            model: piperFiles[0].path,
-            tokens: piperFiles[1].path,
-            dataDir: p.dirname(piperFiles[2].path),
+          supertonic: sherpa.OfflineTtsSupertonicModelConfig(
+            durationPredictor: supertonicFiles[0].path,
+            textEncoder: supertonicFiles[1].path,
+            vectorEstimator: supertonicFiles[2].path,
+            vocoder: supertonicFiles[3].path,
+            ttsJson: supertonicFiles[4].path,
+            unicodeIndexer: supertonicFiles[5].path,
+            voiceStyle: supertonicFiles[6].path,
           ),
           numThreads: 2,
           provider: 'cpu',
@@ -272,7 +281,7 @@ class OfflineArabicVoiceService {
         outputDirectory.path,
         verify: false,
         throwOnError: true,
-        maxSize: 512 * 1024 * 1024,
+        maxSize: 768 * 1024 * 1024,
       );
 
       if (!await _allFilesExist(requiredFiles)) {
@@ -411,7 +420,15 @@ class OfflineArabicVoiceService {
       throw StateError('محرك النطق العربي المحلي غير جاهز.');
     }
 
-    final audio = tts.generate(text: text, sid: 0, speed: 0.95);
+    final audio = tts.generateWithConfig(
+      text: text,
+      config: sherpa.OfflineTtsGenerationConfig(
+        sid: 0,
+        speed: 0.95,
+        numSteps: 8,
+        extra: const {'lang': 'ar'},
+      ),
+    );
     if (audio.samples.isEmpty || audio.sampleRate <= 0) {
       throw StateError('لم يتمكن محرك النطق العربي من إنتاج صوت.');
     }

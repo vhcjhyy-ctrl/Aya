@@ -15,3 +15,29 @@
 - Package: https://pub.dev/packages/llama_flutter_android
 - Source: https://github.com/dragneel2074/Llama-Flutter
 - License: MIT.
+
+
+## sherpa-onnx
+
+- Flutter package: https://pub.dev/packages/sherpa_onnx
+- Runtime source: https://github.com/k2-fsa/sherpa-onnx
+- Runtime license: Apache License 2.0.
+- Recognition and synthesis are performed locally on the device.
+
+## Whisper Tiny speech-recognition model
+
+- Download source: https://github.com/k2-fsa/sherpa-onnx/releases/tag/asr-models
+- Model archive: `sherpa-onnx-whisper-tiny.tar.bz2`
+- Downloaded on demand and stored in the app's private support directory.
+
+## Supertonic 3 Arabic text-to-speech model
+
+- Download source: https://github.com/k2-fsa/sherpa-onnx/releases/tag/tts-models
+- Model archive: `sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2`
+- Language mode: Arabic (`ar`).
+- Model weights license: BigScience Open RAIL-M License, dated August 18, 2022.
+- Full license copy: `assets/licenses/SUPERTONIC_OPEN_RAIL_M_LICENSE.txt`
+- Official model card and license: https://huggingface.co/Supertone/supertonic-3
+- Model weights are downloaded only after the user explicitly accepts the Open RAIL-M conditions. They are not bundled in the APK.
+- The license requires lawful use and prohibits, among other things, harm to minors, malicious misinformation, harmful exposure of personal data, harassment/defamation, non-consensual impersonation, discriminatory or harmful use, certain consequential automated decisions, medical advice, and use in law-enforcement/immigration/asylum decision processes. It also requires disclosure of AI-generated content in contexts where it could be mistaken for human-created content.
+- The Supertonic code is MIT-licensed; the model weights have separate Open RAIL-M terms.
