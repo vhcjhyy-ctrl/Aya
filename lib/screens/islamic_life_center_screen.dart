@@ -177,8 +177,12 @@ class _IslamicLifeCenterScreenState extends State<IslamicLifeCenterScreen>
     if (mounted) setState(() => _loading = false);
   }
 
-  Future<void> _saveSet(String key, Set<int> values) =>
-      widget.storage.setString(key, jsonEncode(values.toList()..sort()));
+  Future<void> _saveSet(String key, Set<int> values) async {
+    await widget.storage.setString(
+      key,
+      jsonEncode(values.toList()..sort()),
+    );
+  }
 
   Future<void> _toggleDaily(String task, bool checked) async {
     setState(() {
@@ -245,10 +249,12 @@ class _IslamicLifeCenterScreenState extends State<IslamicLifeCenterScreen>
     await _persistFasting();
   }
 
-  Future<void> _persistFasting() => widget.storage.setString(
-        'worship_fasting_log_v1',
-        jsonEncode(_fastingRecords),
-      );
+  Future<void> _persistFasting() async {
+    await widget.storage.setString(
+      'worship_fasting_log_v1',
+      jsonEncode(_fastingRecords),
+    );
+  }
 
   void _message(String text) {
     if (!mounted) return;
