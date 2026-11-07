@@ -727,6 +727,27 @@ class DatabaseService {
   }
 
   /// Fetch standard Madinah Mushaf page number for a given ayah.
+  /// Returns the first bundled Mushaf page for a Juz', using local Quran data.
+  /// No network request is made; null means the local seed lacks this division.
+  Future<int?> getFirstPageForJuz(int juz) async {
+    if (juz < 1 || juz > 30) return null;
+    final db = _database!;
+    await _ensureQuranSeeded();
+    final rows = await db.rawQuery(
+      '''
+      SELECT page
+      FROM ayahs
+      WHERE juz = ? AND page BETWEEN 1 AND 604
+      ORDER BY global_number ASC
+      LIMIT 1
+      ''',
+      [juz],
+    );
+    if (rows.isEmpty) return null;
+    final page = rows.first['page'];
+    return page is num ? page.toInt().clamp(1, 604) : null;
+  }
+
   Future<int> getPageForAyah(int surahNumber, int ayahNumber) async {
     final db = _database!;
     await _ensureQuranSeeded();
