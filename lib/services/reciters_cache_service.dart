@@ -73,6 +73,16 @@ class RecitersCacheService {
           : filterRecitersForSurah(parsed, surahNumber);
       _riwayahCache[cacheKey] = result;
       return List<Map<String, dynamic>>.from(result);
+    } catch (error) {
+      if (surahNumber == null) rethrow;
+
+      // If the catalogue endpoint cannot apply its sura filter, fall back
+      // to the full riwayah list and use each moshaf's surah_list locally.
+      debugPrint('MP3Quran sura-filter request failed; using local filtering: $error');
+      final unfiltered = await getRecitersForRiwayah(riwayahId);
+      final fallback = filterRecitersForSurah(unfiltered, surahNumber);
+      _riwayahCache[cacheKey] = fallback;
+      return List<Map<String, dynamic>>.from(fallback);
     } finally {
       client.close();
       loadingNotifier.value = false;
