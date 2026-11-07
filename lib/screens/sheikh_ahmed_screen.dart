@@ -444,7 +444,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             'أو التمييز والإضرار، أو القرارات الآلية ذات الأثر القانوني، أو تقديم نصائح ونتائج طبية، '
             'أو استخدامه في قرارات إنفاذ القانون أو الهجرة أو اللجوء.\n\n'
             'يجب كذلك الإفصاح عن المحتوى الصوتي المُنشأ آليًا عند نشره في سياق قد يلتبس فيه على المستمع. '
-            'الصوت الاصطناعي لا يمثل صوت شيخ أو قارئ بعينه.',
+            'الصوت الاصطناعي لا يمثل صوت شيخ أو قارئ بعينه.\n\n'
+            'رفض هذا الترخيص لا يمنع استخدام نموذج الحوار المجاني؛ '
+            'يمكنك متابعة المحادثة بالكتابة أو استخدام صوت الهاتف إن كان متاحًا.',
           ),
         ),
         actions: [
@@ -457,7 +459,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           ),
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('رفض'),
+            child: const Text('المتابعة دون محرك الصوت'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
