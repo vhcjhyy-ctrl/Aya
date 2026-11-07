@@ -13,6 +13,13 @@ void main() {
       expect(service.isSynthesisReady, isFalse);
     });
 
+    test('reports the combined one-time voice model download size', () {
+      expect(
+        OfflineArabicVoiceService.totalModelDownloadBytes,
+        244979179,
+      );
+    });
+
     test('encodes mono PCM16 WAV with a valid RIFF header', () {
       final wav = OfflineArabicVoiceService.encodePcm16Wav(
         Float32List.fromList([0.0, 0.5, -0.5, 1.0]),
