@@ -415,18 +415,22 @@ class OfflineArabicVoiceService {
     }
   }
 
-  Future<String> synthesizeToFile(String text) async {
+  Future<String> synthesizeToFile(
+    String text, {
+    double speed = 0.95,
+  }) async {
     final tts = _tts;
     final directory = _modelDirectory;
     if (!_ready || tts == null || directory == null) {
       throw StateError('محرك النطق العربي المحلي غير جاهز.');
     }
 
+    final safeSpeed = speed.clamp(0.70, 1.30).toDouble();
     final audio = tts.generateWithConfig(
       text: text,
       config: sherpa.OfflineTtsGenerationConfig(
         sid: 0,
-        speed: 0.95,
+        speed: safeSpeed,
         numSteps: 8,
         extra: const {'lang': 'ar'},
       ),
