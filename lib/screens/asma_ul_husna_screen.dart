@@ -265,6 +265,12 @@ class _AsmaUlHusnaScreenState extends State<AsmaUlHusnaScreen> {
 
   Widget _buildLibrary(ThemeData theme, ColorScheme scheme) {
     final filtered = _filteredNames;
+    final now = DateTime.now();
+    final dayIndex = now
+            .difference(DateTime(now.year, 1, 1))
+            .inDays %
+        _names.length;
+    final dailyName = _names[dayIndex];
     return Column(
       children: [
         Padding(
@@ -290,6 +296,66 @@ class _AsmaUlHusnaScreenState extends State<AsmaUlHusnaScreen> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
                 borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+          child: Card(
+            elevation: 0,
+            color: scheme.primaryContainer.withValues(alpha: 0.42),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: scheme.outlineVariant),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              child: Row(
+                children: [
+                  Icon(Icons.wb_sunny_outlined, color: scheme.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'اسم اليوم',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          dailyName.arabic,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            color: scheme.primary,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Amiri',
+                          ),
+                        ),
+                        Text(
+                          dailyName.meaningAr,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: _favorites.contains(dailyName.slug)
+                        ? 'إزالة اسم اليوم من المفضلة'
+                        : 'حفظ اسم اليوم',
+                    onPressed: () => _toggleFavorite(dailyName),
+                    icon: Icon(
+                      _favorites.contains(dailyName.slug)
+                          ? Icons.favorite_rounded
+                          : Icons.favorite_border_rounded,
+                      color: _favorites.contains(dailyName.slug)
+                          ? scheme.error
+                          : scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
