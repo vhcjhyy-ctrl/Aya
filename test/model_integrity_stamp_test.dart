@@ -71,7 +71,7 @@ void main() {
       expect(
         ModelIntegrityStamp.matches(
           stamp,
-          sha256: '0' * 64,
+          sha256: List<String>.filled(64, '0').join(),
           byteLength: bytes,
           modifiedAtMicros: modifiedAtMicros,
         ),
