@@ -41,6 +41,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   final stt.SpeechToText _speech = stt.SpeechToText();
   final FlutterTts _tts = FlutterTts();
   final AudioPlayer _player = AudioPlayer();
+  StreamSubscription<dynamic>? _playerErrorSubscription;
+  String _activePlayerUse = '';
 
   int _surah = 1;
   int _index = 0;
@@ -94,6 +96,22 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   void initState() {
     super.initState();
     _tabs = TabController(length: 2, vsync: this);
+    _playerErrorSubscription = _player.eventStream.listen(
+      (_) {},
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Qalam Muslim audio playback error: $error');
+        if (!mounted) return;
+        final isReference = _activePlayerUse == 'reference';
+        setState(() {
+          _status = isReference
+              ? 'تعذّر تشغيل تسجيل هذا القارئ من الخادم. جرّب قارئًا آخر أو أعد المحاولة لاحقًا.'
+              : 'تعذّر تشغيل الصوت. أعد المحاولة.';
+        });
+        if (isReference) {
+          _toast('تعذّر تشغيل تلاوة القارئ المحدد. قد يكون الخادم غير متاح مؤقتًا.');
+        }
+      },
+    );
     _surah = widget.storage.getInt('sheikh_selected_surah', defaultValue: 1);
     _dailyTarget = widget.storage.getInt('hifz_daily_target', defaultValue: 5);
     _repeatReference = widget.storage.getBool('hifz_repeat_reference', defaultValue: false);
@@ -158,13 +176,12 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
               ? availableSources.first['server'] as String
               : '');
 
+      // A slower request for the previous surah must not replace the
+      // selection saved for the currently visible surah.
+      if (!mounted || requestedSurah != _surah) return;
       if (selected != savedServer) {
         await widget.storage.setString('hifz_reference_reciter', selected);
       }
-
-      // A slower request for the previous surah must not replace the
-      // catalogue after the user has already selected another surah.
-      if (!mounted || requestedSurah != _surah) return;
       setState(() {
         _referenceReciters = sources;
         _selectedReciter = selected;
@@ -575,6 +592,7 @@ async {
         try {
           generatedFile = await _offlineArabicVoice.synthesizeToFile(message);
           await _player.stop();
+          _activePlayerUse = 'assistant';
           playbackCompleted = Completer<void>();
           completionSubscription = _player.onPlayerComplete.listen((_) {
             if (playbackCompleted != null &&
@@ -1511,13 +1529,21 @@ async {
       return;
     }
     try {
+      _activePlayerUse = 'reference';
       await _player.setReleaseMode(
         _repeatReference ? ReleaseMode.loop : ReleaseMode.stop,
       );
       await _player.play(UrlSource(url));
       _toast('بدأ تشغيل السورة كاملة من مصدر القارئ المرجعي.');
-    } catch (_) {
-      _toast('تعذّر تشغيل التلاوة المرجعية. تحقق من اتصال الإنترنت.');
+    } catch (error) {
+      _activePlayerUse = '';
+      debugPrint('Reference recitation failed for $_selectedReciter: $error');
+      if (mounted) {
+        setState(() {
+          _status = 'تعذّر تشغيل تسجيل القارئ المختار. جرّب قارئًا آخر أو تحقق من الاتصال.';
+        });
+      }
+      _toast('لم يعمل تسجيل هذا القارئ لهذه السورة. جرّب قارئًا آخر.');
     }
   }
 
@@ -1664,6 +1690,7 @@ async {
     unawaited(_localAssistant.cancelDownload());
     _speech.cancel();
     _tts.stop();
+    unawaited(_playerErrorSubscription?.cancel());
     _player.dispose();
     unawaited(_localAssistant.dispose());
     super.dispose();
