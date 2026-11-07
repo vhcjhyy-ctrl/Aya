@@ -326,23 +326,32 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _speakHelp() async {
+    const message = 'مرحبًا بك في مساعد التسميع في قلم مسلم. اختر السورة والقارئ، ثم أخفِ الآية وابدأ التسميع. سأعرض مقارنة لفظية تقريبية، وليست حكمًا على التجويد.';
+    if (_offlineArabicVoice.isSynthesisReady) {
+      await _assistantSpeak(message);
+      return;
+    }
     if (!_ttsReady) {
-      _toast('ثبّت صوتًا عربيًا في إعدادات تحويل النص إلى كلام بالهاتف.');
+      _toast('ثبّت صوتًا عربيًا أو جهّز محرك النطق المحلي لسماع التعليمات.');
       return;
     }
     await _tts.stop();
-    await _tts.speak('مرحبًا بك في مساعد التسميع في قلم مسلم. اختر السورة والقارئ، ثم أخفِ الآية وابدأ التسميع. سأعرض مقارنة لفظية تقريبية، وليست حكمًا على التجويد.');
+    await _tts.speak(message);
   }
 
   Future<void> _speakResult() async {
     final result = _result;
-    if (!_ttsReady || result == null) return;
-    await _tts.stop();
-    await _tts.speak(
-      'نسبة التطابق اللفظي التقريبية ${result.similarityPercent} بالمئة. '
-      'التقط الهاتف ${result.matchedWords} كلمة من أصل ${result.expectedWords}. '
-      'راجع الكلمات التي لم يلتقطها، فقد يخطئ التعرف الصوتي في ألفاظ القرآن.',
-    );
+    if (result == null) return;
+    final message =
+        'نسبة التطابق اللفظي التقريبية ${result.similarityPercent} بالمئة. '
+        'التقط الهاتف ${result.matchedWords} كلمة من أصل ${result.expectedWords}. '
+        'راجع الكلمات التي لم يلتقطها، فقد يخطئ التعرف الصوتي في ألفاظ القرآن.';
+    if (_offlineArabicVoice.isSynthesisReady) {
+      await _assistantSpeak(message);
+    } else if (_ttsReady) {
+      await _tts.stop();
+      await _tts.speak(message);
+    }
   }
 
   Future<void> _cancelVoiceAssistantDownload() async {
@@ -1219,9 +1228,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       _toast('اختر سورة أولًا.');
       return;
     }
-    if (_offlineVoiceReady &&
-        _assistantConversationActive &&
-        _assistantPhase == _AssistantPhase.reciting) {
+
+    // Use the on-device Arabic recognizer whenever it is ready, including
+    // the normal memorization flow outside the conversational assistant.
+    if (_offlineArabicVoice.isRecognitionReady) {
       await _player.stop();
       await _tts.stop();
       setState(() {
@@ -1237,20 +1247,30 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             if (!mounted) return;
             setState(() {
               _listening = listening;
-              _assistantListening = listening;
+              _assistantListening = _assistantConversationActive && listening;
               _status = listening
-                  ? 'الهاتف يستمع إلى تلاوتك الآن...'
+                  ? 'الهاتف يستمع إلى تلاوتك الآن — التعرف العربي محلي'
                   : 'جارٍ تحليل التلاوة محليًا...';
             });
           },
         );
-        if (!mounted || !_assistantConversationActive) return;
+        if (!mounted) return;
         setState(() {
           _recognized = recognized;
           _listening = false;
           _assistantListening = false;
         });
-        unawaited(_finishAssistantRecitation(recognized));
+        if (_assistantConversationActive &&
+            _assistantPhase == _AssistantPhase.reciting) {
+          unawaited(_finishAssistantRecitation(recognized));
+        } else if (recognized.trim().isEmpty) {
+          setState(() => _status = 'لم ألتقط تلاوة واضحة. حاول مرة أخرى.');
+        } else {
+          setState(() {
+            _compare();
+            _status = 'اكتملت المقارنة اللفظية محليًا. راجع الكلمات أدناه.';
+          });
+        }
       } catch (error) {
         if (!mounted) return;
         setState(() {
@@ -1261,8 +1281,9 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       }
       return;
     }
+
     if (!_speechReady) {
-      _toast('خدمة التعرف الصوتي غير متاحة. جهّز محرك الصوت المحلي أو فعّل التعرف العربي في الهاتف.');
+      _toast('خدمة التعرف الصوتي غير متاحة. نزّل محرك التعرف العربي المحلي أو فعّل التعرف الصوتي في الهاتف.');
       return;
     }
     await _player.stop();
@@ -1305,10 +1326,6 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _startVoiceCommand() async {
-    if (!_speechReady) {
-      _toast('خدمة الأوامر الصوتية العربية غير متاحة على هذا الجهاز.');
-      return;
-    }
     await _player.stop();
     await _tts.stop();
     _commandMode = true;
@@ -1317,6 +1334,45 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       _listening = true;
       _status = 'استمع إلى أمر قصير: التالي، السابق، كرر، أظهر الآية، أو ابدأ التسميع.';
     });
+
+    if (_offlineArabicVoice.isRecognitionReady) {
+      try {
+        final recognized = await _offlineArabicVoice.listen(
+          maxDuration: const Duration(seconds: 8),
+          onListeningChanged: (listening) {
+            if (!mounted) return;
+            setState(() {
+              _listening = listening;
+              _status = listening
+                  ? 'استمع إلى أمرك — التعرف العربي محلي'
+                  : 'جارٍ تحليل الأمر الصوتي...';
+            });
+          },
+        );
+        if (!mounted) return;
+        _commandMode = false;
+        setState(() {
+          _recognized = recognized;
+          _listening = false;
+        });
+        await _handleVoiceCommand(recognized);
+      } catch (error) {
+        _commandMode = false;
+        if (mounted) setState(() {
+          _listening = false;
+          _status = 'تعذّر تحليل الأمر الصوتي محليًا: $error';
+        });
+      }
+      return;
+    }
+
+    if (!_speechReady) {
+      _commandMode = false;
+      setState(() => _listening = false);
+      _toast('خدمة الأوامر العربية غير متاحة. جهّز محرك التعرف المحلي أو فعّل خدمة التعرف في الهاتف.');
+      return;
+    }
+
     try {
       await _speech.listen(
         localeId: _locale,
@@ -1820,7 +1876,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                     Align(
                       alignment: AlignmentDirectional.centerEnd,
                       child: TextButton.icon(
-                        onPressed: _ttsReady ? _speakResult : null,
+                        onPressed: (_ttsReady || _offlineArabicVoice.isSynthesisReady) ? _speakResult : null,
                         icon: const Icon(Icons.volume_up_outlined, size: 18),
                         label: const Text('استمع إلى التقييم الصوتي'),
                       ),
