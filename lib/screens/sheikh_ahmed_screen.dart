@@ -18,6 +18,7 @@ import '../services/reciters_cache_service.dart';
 import '../services/local_ai_assistant_service.dart';
 import '../services/offline_arabic_voice_service.dart';
 import '../services/quran_voice_intent.dart';
+import '../theme/app_themes.dart';
 
 enum _AssistantPhase {
   idle,
@@ -88,6 +89,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   double _voiceVolume = 0.90;
   bool _voiceRepliesEnabled = true;
   bool _autoHideAyah = true;
+  String _assistantThemeMode = 'system';
   DateTime? _assistantSessionStartedAt;
   int _assistantTurnCount = 0;
   String _lastAssistantMessage = '';
@@ -137,6 +139,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _autoHideAyah = widget.storage.getBool(
       'sheikh_auto_hide_ayah',
       defaultValue: true,
+    );
+    _assistantThemeMode = widget.storage.getString(
+      'sheikh_assistant_theme',
+      defaultValue: 'system',
     );
     _restoreAssistantTranscript();
     _selectedReciter = widget.storage.getString(
@@ -2268,24 +2274,88 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('الشيخ أحمد محمد', style: TextStyle(fontWeight: FontWeight.bold)),
-        actions: [
-          IconButton(onPressed: _speakHelp, tooltip: 'تعليمات صوتية', icon: const Icon(Icons.volume_up_outlined)),
-        ],
-        bottom: TabBar(
-          controller: _tabs,
-          tabs: const [
-            Tab(icon: Icon(Icons.mic_none_rounded), text: 'التسميع'),
-            Tab(icon: Icon(Icons.auto_stories_rounded), text: 'خطة الحفظ'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabs,
-        children: [_tasmee(theme), _hifz(theme)],
+    final inheritedTheme = Theme.of(context);
+    final resolvedTheme = switch (_assistantThemeMode) {
+      'light' => buildThemeData('light'),
+      'dark' => buildThemeData('dark'),
+      _ => inheritedTheme,
+    };
+
+    return Theme(
+      data: resolvedTheme,
+      child: Builder(
+        builder: (context) {
+          final theme = Theme.of(context);
+          return Scaffold(
+            appBar: AppBar(
+              title: const Text(
+                'الشيخ أحمد محمد',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              actions: [
+                PopupMenuButton<String>(
+                  tooltip: 'مظهر شاشة المساعد',
+                  initialValue: _assistantThemeMode,
+                  icon: Icon(
+                    _assistantThemeMode == 'light'
+                        ? Icons.light_mode_rounded
+                        : _assistantThemeMode == 'dark'
+                            ? Icons.dark_mode_rounded
+                            : Icons.brightness_auto_rounded,
+                  ),
+                  onSelected: (mode) {
+                    setState(() => _assistantThemeMode = mode);
+                    unawaited(
+                      widget.storage.setString('sheikh_assistant_theme', mode),
+                    );
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: 'system',
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.brightness_auto_rounded),
+                        title: Text('حسب سمة التطبيق'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'light',
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.light_mode_rounded),
+                        title: Text('الوضع الفاتح'),
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'dark',
+                      child: ListTile(
+                        dense: true,
+                        leading: Icon(Icons.dark_mode_rounded),
+                        title: Text('الوضع الداكن'),
+                      ),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  onPressed: _speakHelp,
+                  tooltip: 'تعليمات صوتية',
+                  icon: const Icon(Icons.volume_up_outlined),
+                ),
+              ],
+              bottom: TabBar(
+                controller: _tabs,
+                tabs: const [
+                  Tab(icon: Icon(Icons.mic_none_rounded), text: 'التسميع'),
+                  Tab(icon: Icon(Icons.auto_stories_rounded), text: 'خطة الحفظ'),
+                ],
+              ),
+            ),
+            body: TabBarView(
+              controller: _tabs,
+              children: [_tasmee(theme), _hifz(theme)],
+            ),
+          );
+        },
       ),
     );
   }
