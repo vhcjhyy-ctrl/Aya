@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/quran_models.dart';
+import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../services/local_spiritual_planner_service.dart';
 import '../services/storage_service.dart';
-import 'quran_screen.dart';
+import 'surah_reader/surah_pager_screen.dart';
 
 class WirdQadaaScreen extends StatefulWidget {
   final StorageService storage;
@@ -274,13 +276,37 @@ class _WirdQadaaScreenState extends State<WirdQadaaScreen>
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _openQuran() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => QuranScreen(storage: widget.storage),
-      ),
-    );
+  Future<void> _openQuran() async {
+    final plan = _plan;
+    if (plan == null) return;
+    try {
+      final page = plan.pageStartForDay(plan.currentDay);
+      final db = await DatabaseService.getInstance();
+      final ayahs = await db.getAyahsForPage(page);
+      if (ayahs.isEmpty) {
+        _showMessage('لا توجد آيات مرتبطة بهذه الصفحة في المصحف المحلي.');
+        return;
+      }
+      final surahNumber = (ayahs.first['surah_number'] as num).toInt();
+      final ayahNumber = (ayahs.first['ayah_number'] as num).toInt();
+      final surahs = await ApiService.fetchSurahList();
+      final surah = surahs.firstWhere(
+        (item) => item.number == surahNumber,
+      );
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SurahPagerScreen(
+            initialSurah: surah,
+            storage: widget.storage,
+            initialAyahNumber: ayahNumber,
+          ),
+        ),
+      );
+    } catch (error) {
+      _showMessage('تعذّر فتح ورد اليوم: ' + error.toString());
+    }
   }
 
   @override
