@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:math';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:async';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +16,7 @@ import '../services/storage_service.dart';
 import '../services/quran_recitation_matcher.dart';
 import '../services/reciters_cache_service.dart';
 import '../services/local_ai_assistant_service.dart';
+import '../services/offline_arabic_voice_service.dart';
 import '../services/quran_voice_intent.dart';
 
 enum _AssistantPhase {
@@ -61,6 +64,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   bool _loadingReferenceReciters = false;
 
   final LocalAiAssistantService _localAssistant = LocalAiAssistantService();
+  final OfflineArabicVoiceService _offlineArabicVoice = OfflineArabicVoiceService();
+  bool _offlineVoiceReady = false;
   bool _assistantReady = false;
   bool _assistantBusy = false;
   bool _assistantConversationActive = false;
@@ -308,6 +313,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _cancelVoiceAssistantDownload() async {
+    await _offlineArabicVoice.cancelDownload();
     await _localAssistant.cancelDownload();
     if (mounted) {
       setState(() {
@@ -319,65 +325,104 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   Future<void> _prepareVoiceAssistant() async {
     if (_assistantBusy) return;
     if (_assistantReady) {
-      if (!_speechReady) {
-        _toast('المساعد جاهز. فعّل خدمة التعرف الصوتي العربية في الهاتف لبدء الحوار.');
-        return;
+      if (!_offlineVoiceReady) {
+        try {
+          await _offlineArabicVoice.initialize(
+            onProgress: (progress, status) {
+              if (!mounted) return;
+              setState(() {
+                _assistantDownloadProgress = progress;
+                _assistantModelStatus = status;
+              });
+            },
+          );
+          _offlineVoiceReady = true;
+        } catch (error) {
+          _toast('تعذّر تجهيز الصوت المحلي: $error');
+        }
       }
-      await _startVoiceAssistant();
+      if (_offlineVoiceReady || _speechReady) {
+        await _startVoiceAssistant();
+      } else {
+        _toast('لا تتوفر خدمة التعرف الصوتي. تحقق من الميكروفون أو اتصال تنزيل المحرك المحلي.');
+      }
       return;
     }
 
     setState(() {
       _assistantBusy = true;
       _assistantDownloadProgress = 0;
-      _assistantModelStatus = 'جارٍ تجهيز المساعد المحلي...';
+      _assistantModelStatus = 'جارٍ تجهيز المساعد الصوتي المحلي...';
     });
     try {
+      try {
+        await _offlineArabicVoice.initialize(
+          onProgress: (progress, status) {
+            if (!mounted) return;
+            setState(() {
+              _assistantDownloadProgress = progress * 0.28;
+              _assistantModelStatus = status;
+            });
+          },
+        );
+        _offlineVoiceReady = true;
+      } catch (voiceError) {
+        _offlineVoiceReady = false;
+        if (!_speechReady) rethrow;
+        if (mounted) {
+          setState(() => _assistantModelStatus =
+              'تعذّر المحرك المحلي؛ سيُستخدم صوت الهاتف: $voiceError');
+        }
+      }
+
       if (!await _localAssistant.isModelDownloaded()) {
-        setState(() => _assistantModelStatus = 'تنزيل النموذج لأول مرة — نحو 528 ميجابايت');
+        if (mounted) {
+          setState(() {
+            _assistantDownloadProgress = _offlineVoiceReady ? 0.28 : 0;
+            _assistantModelStatus =
+                'تنزيل نموذج الحوار المحلي — نحو 528 ميجابايت';
+          });
+        }
         await _localAssistant.downloadModel(
           onProgress: (progress) {
             if (!mounted) return;
             setState(() {
-              _assistantDownloadProgress = progress;
+              _assistantDownloadProgress =
+                  (_offlineVoiceReady ? 0.28 : 0) + progress *
+                      (_offlineVoiceReady ? 0.72 : 1);
               _assistantModelStatus =
-                  'تنزيل النموذج ${(progress * 100).round()}%';
+                  'تنزيل نموذج الحوار ${(progress * 100).round()}%';
             });
           },
         );
       }
       if (!mounted) return;
-      setState(() => _assistantModelStatus = 'جارٍ تحميل النموذج في ذاكرة الهاتف...');
+      setState(() => _assistantModelStatus = 'جارٍ تحميل نموذج الحوار في ذاكرة الهاتف...');
       await _localAssistant.loadModel();
       if (!mounted) return;
       setState(() {
         _assistantReady = true;
-        _assistantModelStatus = _localAssistant.gpuAccelerationEnabled
-            ? 'المساعد جاهز — تسريع GPU'
-            : 'المساعد جاهز — CPU';
-        if (!_ttsReady) {
-          _assistantModelStatus += ' — النطق العربي غير متاح من الهاتف';
-        }
-        if (!_speechReady) {
-          _assistantModelStatus += ' — يلزم تفعيل التعرف الصوتي';
-        }
+        final speed = _localAssistant.gpuAccelerationEnabled
+            ? 'GPU'
+            : 'CPU';
+        _assistantModelStatus = _offlineVoiceReady
+            ? 'المساعد جاهز — صوت عربي محلي · $speed'
+            : 'المساعد جاهز — $speed';
       });
-      if (_speechReady) {
+      if (_offlineVoiceReady || _speechReady) {
         await _startVoiceAssistant();
       } else {
-        _toast('تم تجهيز المساعد المحلي. فعّل خدمة التعرف الصوتي العربية ثم اضغط ابدأ الحوار.');
+        _toast('تم تجهيز نموذج الحوار، لكن تعذّر تجهيز محرك الصوت. أعد المحاولة بعد التحقق من الاتصال والميكروفون.');
       }
     } catch (error) {
       if (mounted) {
-        final cancelled = error.toString().contains('أُلغي تنزيل نموذج المساعد');
+        final cancelled = error.toString().contains('أُلغي');
         setState(() {
           _assistantModelStatus = cancelled
-              ? 'أُلغي تنزيل نموذج المساعد.'
-              : 'تعذّر تجهيز المساعد: ' + error.toString();
+              ? 'أُلغي التنزيل.'
+              : 'تعذّر تجهيز المساعد: $error';
         });
-        if (!cancelled) {
-          _toast('تحقق من مساحة التخزين والاتصال ثم أعد المحاولة.');
-        }
+        if (!cancelled) _toast('تحقق من مساحة التخزين والاتصال ثم أعد المحاولة.');
       }
     } finally {
       if (mounted) setState(() => _assistantBusy = false);
@@ -413,15 +458,43 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _assistantSpeak(String message) async {
-    if (!_ttsReady) {
-      _toast(message);
-      return;
-    }
     if (mounted) setState(() => _assistantSpeaking = true);
+    String? generatedFile;
+    StreamSubscription<void>? completionSubscription;
+    Completer<void>? playbackCompleted;
     try {
-      await _tts.stop();
-      await _tts.speak(message);
+      if (_ttsReady) {
+        await _tts.stop();
+        await _tts.speak(message);
+        return;
+      }
+      if (_offlineVoiceReady) {
+        generatedFile = await _offlineArabicVoice.synthesizeToFile(message);
+        await _player.stop();
+        playbackCompleted = Completer<void>();
+        completionSubscription = _player.onPlayerComplete.listen((_) {
+          if (playbackCompleted != null &&
+              !playbackCompleted!.isCompleted) {
+            playbackCompleted!.complete();
+          }
+        });
+        await _player.play(DeviceFileSource(generatedFile));
+        final timeoutMilliseconds =
+            (message.length * 260).clamp(12000, 60000).toInt();
+        await playbackCompleted!.future.timeout(
+          Duration(milliseconds: timeoutMilliseconds),
+          onTimeout: () {},
+        );
+        return;
+      }
+      _toast(message);
+    } catch (_) {
+      _toast(message);
     } finally {
+      await completionSubscription?.cancel();
+      if (generatedFile != null) {
+        await _offlineArabicVoice.deleteGeneratedFile(generatedFile);
+      }
       if (mounted) setState(() => _assistantSpeaking = false);
     }
   }
@@ -453,7 +526,50 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _listenForAssistantReply() async {
-    if (!_assistantConversationActive || !_speechReady) return;
+    if (!_assistantConversationActive) return;
+    if (_offlineVoiceReady) {
+      _assistantFinalResultHandled = false;
+      try {
+        final recognized = await _offlineArabicVoice.listen(
+          onListeningChanged: (listening) {
+            if (!mounted) return;
+            setState(() {
+              _assistantListening = listening;
+              _listening = listening;
+              _status = listening
+                  ? 'المساعد يستمع إليك — التعرف العربي محلي'
+                  : 'جارٍ تحليل الإجابة صوتيًا...';
+            });
+          },
+        );
+        if (!mounted ||
+            !_assistantConversationActive ||
+            _assistantFinalResultHandled) {
+          return;
+        }
+        _assistantFinalResultHandled = true;
+        _assistantNoSpeechRetries = 0;
+        setState(() {
+          _assistantListening = false;
+          _listening = false;
+          _recognized = recognized;
+        });
+        unawaited(_handleAssistantInput(recognized));
+      } catch (error) {
+        if (!mounted || !_assistantConversationActive) return;
+        _assistantFinalResultHandled = true;
+        setState(() {
+          _assistantListening = false;
+          _listening = false;
+          _status = 'تعذّر التعرف الصوتي المحلي: $error';
+        });
+        await _assistantSpeakAndListen(
+          'تعذّر التقاط الكلام. تأكد من إذن الميكروفون ثم حاول مرة أخرى.',
+        );
+      }
+      return;
+    }
+    if (!_speechReady) return;
     try {
       await _speech.stop();
       if (!mounted || !_assistantConversationActive) return;
@@ -481,12 +597,12 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           }
         },
       );
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
       setState(() {
         _assistantListening = false;
         _listening = false;
-        _status = 'تعذّر الاستماع. اضغط زر بدء الحوار وحاول مرة أخرى.';
+        _status = 'تعذّر الاستماع: $error';
       });
     }
   }
@@ -831,6 +947,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _assistantSpeaking = false;
     _assistantFinalResultHandled = true;
     _assistantNoSpeechRetries = 0;
+    await _offlineArabicVoice.stopListening();
     await _speech.stop();
     await _tts.stop();
     if (!mounted) return;
@@ -889,7 +1006,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             if (_assistantBusy) ...[
               const SizedBox(height: 8),
               LinearProgressIndicator(value: progress),
-              if (_assistantModelStatus.startsWith('تنزيل النموذج'))
+              if (_assistantModelStatus.startsWith('تنزيل'))
                 Align(
                   alignment: AlignmentDirectional.centerEnd,
                   child: TextButton.icon(
@@ -999,8 +1116,54 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
 
   Future<void> _start() async {
     _commandMode = false;
-    if (!_speechReady || _ayah == null) {
-      _toast('خدمة التعرف العربية غير جاهزة. فعّلها وثبّت اللغة العربية في إعدادات الهاتف.');
+    if (_ayah == null) {
+      _toast('اختر سورة أولًا.');
+      return;
+    }
+    if (_offlineVoiceReady &&
+        _assistantConversationActive &&
+        _assistantPhase == _AssistantPhase.reciting) {
+      await _player.stop();
+      await _tts.stop();
+      setState(() {
+        _recognized = '';
+        _result = null;
+        _showText = false;
+        _status = 'استمع إلى تلاوتك — التعرف العربي محلي...';
+        _listening = true;
+      });
+      try {
+        final recognized = await _offlineArabicVoice.listen(
+          onListeningChanged: (listening) {
+            if (!mounted) return;
+            setState(() {
+              _listening = listening;
+              _assistantListening = listening;
+              _status = listening
+                  ? 'الهاتف يستمع إلى تلاوتك الآن...'
+                  : 'جارٍ تحليل التلاوة محليًا...';
+            });
+          },
+        );
+        if (!mounted || !_assistantConversationActive) return;
+        setState(() {
+          _recognized = recognized;
+          _listening = false;
+          _assistantListening = false;
+        });
+        unawaited(_finishAssistantRecitation(recognized));
+      } catch (error) {
+        if (!mounted) return;
+        setState(() {
+          _listening = false;
+          _assistantListening = false;
+          _status = 'تعذّر تحليل التلاوة محليًا: $error';
+        });
+      }
+      return;
+    }
+    if (!_speechReady) {
+      _toast('خدمة التعرف الصوتي غير متاحة. جهّز محرك الصوت المحلي أو فعّل التعرف العربي في الهاتف.');
       return;
     }
     await _player.stop();
@@ -1137,6 +1300,10 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   }
 
   Future<void> _stop() async {
+    if (_offlineArabicVoice.isListening) {
+      await _offlineArabicVoice.stopListening();
+      return;
+    }
     if (_assistantConversationActive &&
         _assistantPhase == _AssistantPhase.reciting) {
       _assistantManualRecognitionStop = true;
@@ -1337,6 +1504,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _assistantListening = false;
     _assistantSpeaking = false;
     _assistantFinalResultHandled = true;
+    unawaited(_offlineArabicVoice.dispose());
     unawaited(_localAssistant.cancelDownload());
     _speech.cancel();
     _tts.stop();
