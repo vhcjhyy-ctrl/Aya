@@ -627,6 +627,11 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                 .toList()
                 .reversed,
           );
+        final lastAssistant = _assistantTranscript.reversed.firstWhere(
+          (line) => line['role'] == 'assistant',
+          orElse: () => <String, String>{},
+        );
+        _lastAssistantMessage = lastAssistant['content'] ?? '';
       }
     } catch (error) {
       debugPrint('Could not restore voice transcript: $error');
@@ -724,7 +729,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       if (_ttsReady) {
         await _tts.stop();
         await _tts.setVolume(_voiceVolume);
-        await _tts.setSpeechRate((_voiceSpeed * 0.48).clamp(0.30, 0.70));
+        await _tts.setSpeechRate((_voiceSpeed * 0.48).clamp(0.30, 0.70).toDouble());
         await _tts.speak(message);
         return;
       }
