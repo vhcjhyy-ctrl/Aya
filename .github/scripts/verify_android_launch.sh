@@ -24,11 +24,13 @@ if ! adb shell am start -W -n "$MAIN_ACTIVITY" > dist/launch-result.txt 2>&1; th
   exit 1
 fi
 
-sleep 10
-
+# Activity Manager may report "Status: timeout" on a heavily loaded emulator
+# even though the Activity is created successfully. Validate the process,
+# resumed Activity, and rendered app window below instead of trusting that
+# status line alone.
 PID=""
-for attempt in $(seq 1 15); do
-  PID="$(adb shell pidof "$APP_ID" 2>/dev/null | tr -d '\\r' || true)"
+for attempt in $(seq 1 30); do
+  PID="$(adb shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' || true)"
   if [[ -n "$PID" ]]; then
     break
   fi
@@ -38,28 +40,53 @@ done
 if [[ -z "$PID" ]]; then
   collect_diagnostics
   echo "Qalam Muslim process did not stay alive after launch."
+  cat dist/launch-result.txt
   exit 1
 fi
 
 echo "$PID" | tee dist/process-id.txt
-sleep 15
+sleep 20
 collect_diagnostics
 adb exec-out screencap -p > dist/launch-screen.png
 test -s dist/launch-screen.png
 
-if ! grep -q "com.quran.aya.MainActivity" dist/activities-after-launch.txt; then
-  echo "Qalam Muslim MainActivity is not visible in the activity stack."
+if ! grep -Eq "mResumedActivity:.*${APP_ID}/com\.quran\.aya\.MainActivity" dist/activities-after-launch.txt; then
+  echo "Qalam Muslim MainActivity is not the resumed Activity."
   exit 1
 fi
 
-if ! grep -E "mCurrentFocus|mFocusedApp" dist/window-after-launch.txt | grep -q "$APP_ID"; then
-  echo "Qalam Muslim does not own the foreground window after launch."
+if ! grep -Eq "mFocusedApp=.*${APP_ID}/com\.quran\.aya\.MainActivity" dist/activities-after-launch.txt; then
+  echo "Qalam Muslim is not the focused application Activity."
   exit 1
 fi
 
-if grep -E "FATAL EXCEPTION|Process: ${APP_ID}" dist/android-launch-log.txt; then
-  echo "A fatal application exception was recorded."
+# On Android 11, dumpsys window and dumpsys activity expose focus through
+# different records. A system-owned ANR dialog can own mCurrentFocus while
+# the app remains resumed and its window is still rendered. Extract the app's
+# own window and verify its surface instead of searching for mFocusedApp in
+# the window dump (where that field does not exist).
+awk -v app="$APP_ID" '
+  /^[[:space:]]*Window #[0-9]+ Window\{/ {
+    if (block ~ app) printf "%s", block
+    block = ""
+  }
+  { block = block $0 ORS }
+  END {
+    if (block ~ app) printf "%s", block
+  }
+' dist/window-after-launch.txt > dist/app-window-after-launch.txt
+
+if ! grep -q "package=${APP_ID}" dist/app-window-after-launch.txt ||
+   ! grep -q "mHasSurface=true" dist/app-window-after-launch.txt ||
+   ! grep -q "Surface: shown=true" dist/app-window-after-launch.txt ||
+   ! grep -q "isVisible=true" dist/app-window-after-launch.txt; then
+  echo "Qalam Muslim does not have a visible rendered application window."
   exit 1
 fi
 
-echo "PASS: application installed, launched, remained alive, and owned the foreground window on Android 11."
+if grep -E "FATAL EXCEPTION|Process: ${APP_ID}|ANR in ${APP_ID}|Application Not Responding: ${APP_ID}" dist/android-launch-log.txt; then
+  echo "A fatal exception or application ANR was recorded."
+  exit 1
+fi
+
+echo "PASS: application installed, process remained alive, MainActivity stayed resumed, and its window rendered on Android 11."
