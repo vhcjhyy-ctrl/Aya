@@ -125,7 +125,7 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     _initTts();
   }
 
-  Future<void> _loadReferenceR  Future<void> _loadReferenceReciters() async {
+  Future<void> _loadReferenceReciters() async {
     final requestedSurah = _surah;
     if (mounted) setState(() => _loadingReferenceReciters = true);
     try {
@@ -152,7 +152,8 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
       }
 
       sources.sort((a, b) {
-        final nameCompare = (a['name'] as String).compareTo(b['name'] as String);
+        final nameCompare =
+            (a['name'] as String).compareTo(b['name'] as String);
         if (nameCompare != 0) return nameCompare;
         return (a['moshaf_name'] as String).compareTo(
           b['moshaf_name'] as String,
@@ -176,18 +177,19 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
               ? availableSources.first['server'] as String
               : '');
 
-      // A slower request for the previous surah must not replace the
-      // selection saved for the currently visible surah.
+      // Ignore a slow response if the user has already changed the surah.
       if (!mounted || requestedSurah != _surah) return;
       if (selected != savedServer) {
         await widget.storage.setString('hifz_reference_reciter', selected);
       }
+      if (!mounted || requestedSurah != _surah) return;
       setState(() {
         _referenceReciters = sources;
         _selectedReciter = selected;
         _loadingReferenceReciters = false;
       });
-    } catch (_) {
+    } catch (error) {
+      debugPrint('Reference reciter catalogue failed: $error');
       if (!mounted || requestedSurah != _surah) return;
       setState(() {
         _referenceReciters = [];
@@ -198,9 +200,11 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
     }
   }
 
-async {
+  Future<void> _loadRecords() async {
     try {
-      final value = jsonDecode(widget.storage.getString('qalam_hifz_progress_v1', defaultValue: '{}'));
+      final value = jsonDecode(
+        widget.storage.getString('qalam_hifz_progress_v1', defaultValue: '{}'),
+      );
       if (value is Map) _records = Map<String, dynamic>.from(value);
     } catch (_) {
       _records = {};
