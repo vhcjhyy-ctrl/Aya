@@ -72,6 +72,44 @@ void main() {
       );
     });
 
+    test('filters reciters and moshafs to those containing the selected surah', () {
+      final filtered = RecitersCacheService.filterRecitersForSurah(
+        [
+          {
+            'id': 1,
+            'name': 'قارئ متاح',
+            'moshaf': [
+              {
+                'server': 'https://server1.example/',
+                'surah_list': '1,2,3',
+              },
+              {
+                'server': 'https://server2.example/',
+                'surah_list': '4,5,6',
+              },
+            ],
+          },
+          {
+            'id': 2,
+            'name': 'قارئ غير متاح',
+            'moshaf': [
+              {
+                'server': 'https://server3.example/',
+                'surah_list': '7,8,9',
+              },
+            ],
+          },
+        ],
+        2,
+      );
+
+      expect(filtered, hasLength(1));
+      expect(filtered.single['name'], 'قارئ متاح');
+      final moshafs = filtered.single['moshaf'] as List<Map<String, dynamic>>;
+      expect(moshafs, hasLength(1));
+      expect(moshafs.single['server'], 'https://server1.example/');
+    });
+
     test('keeps older moshaf rows when the surah list is unavailable', () {
       expect(
         RecitersCacheService.moshafHasSurah(
