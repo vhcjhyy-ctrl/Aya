@@ -41,3 +41,55 @@
 - Model weights are downloaded only after the user explicitly accepts the Open RAIL-M conditions. They are not bundled in the APK.
 - The license requires lawful use and prohibits, among other things, harm to minors, malicious misinformation, harmful exposure of personal data, harassment/defamation, non-consensual impersonation, discriminatory or harmful use, certain consequential automated decisions, medical advice, and use in law-enforcement/immigration/asylum decision processes. It also requires disclosure of AI-generated content in contexts where it could be mistaken for human-created content.
 - The Supertonic code is MIT-licensed; the model weights have separate Open RAIL-M terms.
+
+
+## Khatmah — khatmah planning and qadaa workflow
+
+- Project: https://github.com/LhacenMed/khatmah
+- License: MIT
+- Copyright: (c) 2025 Khatmah Contributors
+- Adaptation: the khatmah schedule and qadaa-tracking workflows in Qalam Muslim are independently implemented in Dart/Flutter, using the MIT-licensed project as a functional reference. No Kotlin application module or Android UI source was copied.
+
+MIT License notice:
+
+Copyright (c) 2025 Khatmah Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+## Falah Mobile — 99 Names of Allah dataset
+
+- Project: https://github.com/Roqak/falah-mobile
+- Source file: assets/data/names99.json
+- License: MIT
+- Copyright: (c) 2024 Abdessamad Bettal | Freelancer
+- Adaptation: the 99-name dataset is bundled as an offline asset. Qalam Muslim's search, favorites, and quiz UI are original Flutter implementations.
+
+MIT License notice:
+
+Copyright (c) 2024 Abdessamad Bettal | Freelancer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
