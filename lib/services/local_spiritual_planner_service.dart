@@ -24,9 +24,9 @@ class KhatmahPlan {
   }) {
     final date = startedAt ?? DateTime.now();
     return KhatmahPlan(
-      startJuz: startJuz.clamp(1, 30),
-      startPage: startPage.clamp(1, 604),
-      durationDays: durationDays.clamp(1, 365),
+      startJuz: startJuz.clamp(1, 30).toInt(),
+      startPage: startPage.clamp(1, 604).toInt(),
+      durationDays: durationDays.clamp(1, 365).toInt(),
       startDate: _dateKey(date),
       completedDays: const [],
     );
@@ -42,10 +42,10 @@ class KhatmahPlan {
         .toList()
       ..sort();
     return KhatmahPlan(
-      startJuz: ((json['startJuz'] as num?)?.toInt() ?? 1).clamp(1, 30),
-      startPage: ((json['startPage'] as num?)?.toInt() ?? 1).clamp(1, 604),
+      startJuz: ((json['startJuz'] as num?)?.toInt() ?? 1).clamp(1, 30).toInt(),
+      startPage: ((json['startPage'] as num?)?.toInt() ?? 1).clamp(1, 604).toInt(),
       durationDays:
-          ((json['durationDays'] as num?)?.toInt() ?? 30).clamp(1, 365),
+          ((json['durationDays'] as num?)?.toInt() ?? 30).clamp(1, 365).toInt(),
       startDate: (json['startDate'] ?? _dateKey(DateTime.now())).toString(),
       completedDays: days,
     );
@@ -63,20 +63,20 @@ class KhatmahPlan {
   int get pagesPerDay => max(1, (totalPages / durationDays).ceil());
   int get completedCount => completedDays.length;
   int get remainingSessions => max(0, durationDays - completedCount);
-  double get progress => (completedCount / durationDays).clamp(0.0, 1.0);
+  double get progress => (completedCount / durationDays).clamp(0.0, 1.0).toDouble();
   DateTime get beginsOn => DateTime.parse(startDate);
 
   int dayNumberAt(DateTime date) {
     final normalized = DateTime(date.year, date.month, date.day);
     final first = DateTime(beginsOn.year, beginsOn.month, beginsOn.day);
-    return (normalized.difference(first).inDays + 1).clamp(1, durationDays);
+    return (normalized.difference(first).inDays + 1).clamp(1, durationDays).toInt();
   }
 
   int get currentDay => dayNumberAt(DateTime.now());
   bool isCompleted(int day) => completedDays.contains(day);
 
   int pageStartForDay(int day) {
-    final safeDay = day.clamp(1, durationDays);
+    final safeDay = day.clamp(1, durationDays).toInt();
     return min(604, startPage + (safeDay - 1) * pagesPerDay);
   }
 
@@ -86,7 +86,7 @@ class KhatmahPlan {
   }
 
   KhatmahPlan setDayCompleted(int day, bool completed) {
-    final safeDay = day.clamp(1, durationDays);
+    final safeDay = day.clamp(1, durationDays).toInt();
     final days = <int>{...completedDays};
     if (completed) {
       days.add(safeDay);
@@ -127,7 +127,7 @@ class QadaaLogEntry {
   factory QadaaLogEntry.fromJson(Map<String, dynamic> json) => QadaaLogEntry(
         type: (json['type'] ?? 'prayer').toString(),
         label: (json['label'] ?? '').toString(),
-        count: ((json['count'] as num?)?.toInt() ?? 1).clamp(1, 1000),
+        count: ((json['count'] as num?)?.toInt() ?? 1).clamp(1, 1000).toInt(),
         completedAt: (json['completedAt'] as num?)?.toInt() ?? 0,
       );
 
@@ -176,7 +176,7 @@ class QadaaTrackerState {
         for (final entry in raw.entries) {
           final value = entry.value;
           if (prayerKeys.contains(entry.key.toString()) && value is num) {
-            result[entry.key.toString()] = value.toInt().clamp(0, 1000000);
+            result[entry.key.toString()] = value.toInt().clamp(0, 1000000).toInt();
           }
         }
       }
@@ -188,10 +188,10 @@ class QadaaTrackerState {
       prayerOwed: readCounts('prayerOwed'),
       prayerCompleted: readCounts('prayerCompleted'),
       fastsOwed:
-          ((json['fastsOwed'] as num?)?.toInt() ?? 0).clamp(0, 1000000),
+          ((json['fastsOwed'] as num?)?.toInt() ?? 0).clamp(0, 1000000).toInt(),
       fastsCompleted:
-          ((json['fastsCompleted'] as num?)?.toInt() ?? 0).clamp(0, 1000000),
-      dailyGoal: ((json['dailyGoal'] as num?)?.toInt() ?? 1).clamp(1, 50),
+          ((json['fastsCompleted'] as num?)?.toInt() ?? 0).clamp(0, 1000000).toInt(),
+      dailyGoal: ((json['dailyGoal'] as num?)?.toInt() ?? 1).clamp(1, 50).toInt(),
       logs: rawLogs
           .whereType<Map>()
           .map((row) =>
@@ -300,7 +300,7 @@ class QadaaTrackerState {
   }
 
   QadaaTrackerState setDailyGoal(int goal) =>
-      _copy(dailyGoal: goal.clamp(1, 50));
+      _copy(dailyGoal: goal.clamp(1, 50).toInt());
 
   int currentStreak({DateTime? now}) {
     final counts = _completedByDate();
