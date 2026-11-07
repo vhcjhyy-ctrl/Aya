@@ -19,6 +19,8 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 class OfflineArabicVoiceService {
   static const int _whisperArchiveBytes = 116204861;
   static const int _supertonicArchiveBytes = 128774318;
+  static const int totalModelDownloadBytes =
+      _whisperArchiveBytes + _supertonicArchiveBytes;
   static const String _supertonicArchiveSha256 =
       '82fa96f91c4ef8abaae3a14a3f4153facf88bed821d1f7331cec2700f432c427';
 
@@ -82,6 +84,11 @@ class OfflineArabicVoiceService {
     await models.create(recursive: true);
     _modelDirectory = models;
 
+    final whisperWeight =
+        _whisperArchiveBytes / totalModelDownloadBytes;
+    final supertonicWeight =
+        _supertonicArchiveBytes / totalModelDownloadBytes;
+
     final whisperRoot = Directory(
       p.join(models.path, 'sherpa-onnx-whisper-tiny'),
     );
@@ -100,12 +107,12 @@ class OfflineArabicVoiceService {
         outputDirectory: models,
         requiredFiles: whisperFiles,
         onProgress: (value) => onProgress(
-          value * 0.62,
+          value * whisperWeight,
           'تنزيل محرك التعرف العربي المحلي — Whisper Tiny',
         ),
       );
     } else {
-      onProgress(0.62, 'محرك التعرف العربي موجود على الجهاز');
+      onProgress(whisperWeight, 'محرك التعرف العربي موجود على الجهاز');
     }
 
     final supertonicRoot = Directory(
@@ -122,7 +129,7 @@ class OfflineArabicVoiceService {
     ];
 
     if (!await _allFilesExist(supertonicFiles)) {
-      onProgress(0.48, 'تنزيل الصوت العربي المحلي — Supertonic 3');
+      onProgress(whisperWeight, 'تنزيل الصوت العربي المحلي — Supertonic 3');
       await _downloadAndExtract(
         url: _supertonicUrl,
         archiveName: _supertonicArchiveName,
@@ -131,7 +138,7 @@ class OfflineArabicVoiceService {
         outputDirectory: models,
         requiredFiles: supertonicFiles,
         onProgress: (value) => onProgress(
-          0.48 + value * 0.52,
+          whisperWeight + value * supertonicWeight,
           'تنزيل الصوت العربي المحلي — Supertonic 3',
         ),
       );
