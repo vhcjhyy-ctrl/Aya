@@ -41,7 +41,8 @@ class OfflineArabicVoiceService {
   static const Duration _endpointSilence = Duration(milliseconds: 1350);
   static const Duration _defaultMaxListen = Duration(seconds: 24);
 
-  final AudioRecorder _recorder = AudioRecorder();
+  AudioRecorder? _recorder;
+  AudioRecorder get _audioRecorder => _recorder ??= AudioRecorder();
 
   sherpa.OfflineRecognizer? _recognizer;
   sherpa.OfflineTts? _tts;
@@ -316,7 +317,7 @@ class OfflineArabicVoiceService {
     if (_isListening) {
       throw StateError('التعرف الصوتي يعمل بالفعل.');
     }
-    if (!await _recorder.hasPermission()) {
+    if (!await _audioRecorder.hasPermission()) {
       throw StateError('إذن الميكروفون غير ممنوح للتطبيق.');
     }
 
@@ -335,7 +336,7 @@ class OfflineArabicVoiceService {
       _isListening = false;
       onListeningChanged(false);
       try {
-        await _recorder.stop();
+        await _audioRecorder.stop();
       } catch (_) {}
       try {
         await subscription?.cancel();
@@ -358,7 +359,7 @@ class OfflineArabicVoiceService {
     }
 
     try {
-      final audioStream = await _recorder.startStream(
+      final audioStream = await _audioRecorder.startStream(
         const RecordConfig(
           encoder: AudioEncoder.pcm16bits,
           sampleRate: _sampleRate,
@@ -535,7 +536,8 @@ class OfflineArabicVoiceService {
   Future<void> dispose() async {
     _disposed = true;
     await stopListening();
-    await _recorder.dispose();
+    await _recorder?.dispose();
+    _recorder = null;
     _recognizer?.free();
     _recognizer = null;
     _tts?.free();
