@@ -21,6 +21,8 @@ import 'sirah_screen.dart';
 import 'fiqh/fiqh_screen.dart';
 import 'assistant_screen.dart';
 import 'sheikh_ahmed_screen.dart';
+import 'wird_qadaa_screen.dart';
+import 'asma_ul_husna_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final StorageService storage;
@@ -971,6 +973,56 @@ class _DashboardScreenState extends State<DashboardScreen>
                       icon: Icons.calendar_month,
                       title: TranslationService.t('hijri_calendar'),
                       onTap: () => widget.onTabChange(2, subTab: 2),
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.auto_stories_rounded,
+                      title: TranslationService.isArabic
+                          ? 'خطة ختمة القرآن'
+                          : 'Quran Khatmah',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                WirdQadaaScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.checklist_rtl_rounded,
+                      title: TranslationService.isArabic
+                          ? 'قضاء الصلاة والصيام'
+                          : 'Qadaa Tracker',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WirdQadaaScreen(
+                              storage: widget.storage,
+                              initialTab: 1,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.auto_awesome_rounded,
+                      title: TranslationService.isArabic
+                          ? 'أسماء الله الحسنى'
+                          : '99 Names of Allah',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                AsmaUlHusnaScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
                     ),
                     GridServiceCard(
                       theme: theme,
