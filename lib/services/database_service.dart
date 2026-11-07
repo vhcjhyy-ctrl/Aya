@@ -146,6 +146,43 @@ class DatabaseService {
         FOREIGN KEY (surah_number) REFERENCES surahs (number)
       )
     ''');
+    // The bundled seed database may already contain some of these tables
+    // while still carrying user_version=0. Make bootstrap safe for an
+    // existing seed and add columns introduced after older seed schemas.
+    final addedCleanText = await _ensureColumnExists(
+      db,
+      'ayahs',
+      'text_arabic_clean',
+      "TEXT NOT NULL DEFAULT ''",
+    );
+    await _ensureColumnExists(
+      db, 'ayahs', 'text_english', "TEXT NOT NULL DEFAULT ''",
+    );
+    await _ensureColumnExists(db, 'ayahs', 'tafsir', 'TEXT');
+    await _ensureColumnExists(db, 'ayahs', 'juz', 'INTEGER');
+    await _ensureColumnExists(db, 'ayahs', 'hizb', 'INTEGER');
+    await _ensureColumnExists(db, 'ayahs', 'page', 'INTEGER DEFAULT 1');
+
+    if (addedCleanText) {
+      final rows = await db.query(
+        'ayahs',
+        columns: ['id', 'text_arabic'],
+      );
+      final batch = db.batch();
+      for (final row in rows) {
+        batch.update(
+          'ayahs',
+          {
+            'text_arabic_clean': stripTashkeel(
+              row['text_arabic'] as String? ?? '',
+            ).toLowerCase(),
+          },
+          where: 'id = ?',
+          whereArgs: [row['id']],
+        );
+      }
+      await batch.commit(noResult: true);
+    }
     await db.execute('CREATE INDEX IF NOT EXISTS idx_ayahs_surah ON ayahs(surah_number)');
     await db.execute('CREATE INDEX IF NOT EXISTS idx_ayahs_page ON ayahs(page)');
 
@@ -315,43 +352,7 @@ class DatabaseService {
       )
     ''');
 
-    // The bundled seed database may already contain some of these tables
-    // while still carrying user_version=0. Make bootstrap safe for an
-    // existing seed and add columns introduced after older seed schemas.
-    final addedCleanText = await _ensureColumnExists(
-      db,
-      'ayahs',
-      'text_arabic_clean',
-      "TEXT NOT NULL DEFAULT ''",
-    );
-    await _ensureColumnExists(
-      db, 'ayahs', 'text_english', "TEXT NOT NULL DEFAULT ''",
-    );
-    await _ensureColumnExists(db, 'ayahs', 'tafsir', 'TEXT');
-    await _ensureColumnExists(db, 'ayahs', 'juz', 'INTEGER');
-    await _ensureColumnExists(db, 'ayahs', 'hizb', 'INTEGER');
-    await _ensureColumnExists(db, 'ayahs', 'page', 'INTEGER DEFAULT 1');
 
-    if (addedCleanText) {
-      final rows = await db.query(
-        'ayahs',
-        columns: ['id', 'text_arabic'],
-      );
-      final batch = db.batch();
-      for (final row in rows) {
-        batch.update(
-          'ayahs',
-          {
-            'text_arabic_clean': stripTashkeel(
-              row['text_arabic'] as String? ?? '',
-            ).toLowerCase(),
-          },
-          where: 'id = ?',
-          whereArgs: [row['id']],
-        );
-      }
-      await batch.commit(noResult: true);
-    }
   }
 
 
