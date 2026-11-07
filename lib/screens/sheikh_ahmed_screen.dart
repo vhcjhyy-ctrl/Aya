@@ -504,13 +504,11 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           _offlineVoiceReady = true;
         } catch (error) {
           _offlineVoiceReady = false;
-          if (_assistantVoiceDownloadCancelled) {
-            rethrow;
-          }
           if (mounted) {
             setState(() {
-              _assistantModelStatus =
-                  'تعذّر تجهيز الصوت المحلي؛ المحادثة النصية ما زالت جاهزة: $error';
+              _assistantModelStatus = _assistantVoiceDownloadCancelled
+                  ? 'أُلغي تجهيز الصوت؛ يمكنك متابعة المحادثة بالكتابة.'
+                  : 'تعذّر تجهيز الصوت المحلي؛ المحادثة النصية ما زالت جاهزة: $error';
             });
           }
         } finally {
@@ -1676,12 +1674,14 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
                   const SizedBox(width: 9),
                   Expanded(
                     child: Text(
-                      'لا توجد رسوم API أو اشتراك، ولا تُرسل المحادثة إلى خادم. '
-                      'التجهيز الأول يحتاج تنزيل نحو 773 ميجابايت: '
-                      '528 للمحادثة + 116 للتعرّف الصوتي + 129 للصوت العربي. '
-                      'بعد تنزيل النماذج تعمل المحادثة والتعرّف والنطق محليًا؛ '
-                      'الإنترنت مطلوب للتنزيل الأول والتحديثات فقط. '
-                      'قد تحتاج الملفات بعد فك الضغط إلى مساحة أكبر.',
+                      'لا توجد رسوم API أو اشتراك أو مفتاح مطلوب. '
+                      'نموذج الحوار يعمل على الهاتف ولا يرسل نص المحادثة إلى API. '
+                      'التجهيز الكامل للصوت المحلي يحتاج تنزيل نحو 773 ميجابايت: '
+                      '528 للمحادثة + 116 للتعرّف + 129 للصوت. '
+                      'بعد اكتمال التنزيل تعمل هذه النماذج دون إنترنت. '
+                      'يمكنك رفض محرك الصوت والاستمرار بالمحادثة الكتابية مجانًا؛ '
+                      'وخدمة التعرف الصوتي المدمجة في الهاتف قد تعتمد على إعدادات مزود الجهاز. '
+                      'قد تحتاج الملفات بعد فك الضغط إلى مساحة تخزين أكبر.',
                       style: TextStyle(
                         color: scheme.onSurface,
                         fontSize: 11,
