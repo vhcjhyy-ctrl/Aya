@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import '../services/translation_service.dart';
 import 'welcome_screen.dart';
 import 'main_scaffold.dart';
+import 'sadaqah_dedication_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   final StorageService storage;
@@ -70,50 +71,81 @@ class _SplashScreenState extends State<SplashScreen>
         widget.onThemeChanged(); // Update main directionality instantly
       }
 
-      void navigateToDestination() {
+      Widget destination() {
+        return isFirstTime
+            ? WelcomeScreen(
+                storage: widget.storage,
+                onThemeChanged: widget.onThemeChanged,
+                onComplete: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MainScaffold(
+                        storage: widget.storage,
+                        onThemeChanged: widget.onThemeChanged,
+                      ),
+                    ),
+                  );
+                },
+              )
+            : MainScaffold(
+                storage: widget.storage,
+                onThemeChanged: widget.onThemeChanged,
+              );
+      }
+
+      void openDestination() {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => isFirstTime
-                ? WelcomeScreen(
-                    storage: widget.storage,
-                    onThemeChanged: widget.onThemeChanged,
-                    onComplete: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => MainScaffold(
-                            storage: widget.storage,
-                            onThemeChanged: widget.onThemeChanged,
-                          ),
-                        ),
-                      );
-                    },
-                  )
-                : MainScaffold(
-                    storage: widget.storage,
-                    onThemeChanged: widget.onThemeChanged,
-                  ),
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                destination(),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: ScaleTransition(
-                      scale: Tween<double>(
-                        begin: 1.02,
-                        end: 1.0,
-                      ).animate(animation),
-                      child: child,
-                    ),
-                  );
-                },
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  scale: Tween<double>(
+                    begin: 1.02,
+                    end: 1.0,
+                  ).animate(animation),
+                  child: child,
+                ),
+              );
+            },
             transitionDuration: const Duration(milliseconds: 500),
           ),
         );
       }
 
-      navigateToDestination();
+      final dedicationSeen = widget.storage.getBool(
+        'sadaqah_dedication_seen_v1',
+        defaultValue: false,
+      );
+      if (!dedicationSeen) {
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                SadaqahDedicationScreen(
+              onContinue: () async {
+                await widget.storage.setBool(
+                  'sadaqah_dedication_seen_v1',
+                  true,
+                );
+                if (mounted) openDestination();
+              },
+            ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
+            transitionDuration: const Duration(milliseconds: 450),
+          ),
+        );
+      } else {
+        openDestination();
+      }
     });
   }
 

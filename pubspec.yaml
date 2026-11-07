@@ -98,6 +98,7 @@ flutter:
   assets:
     - assets/icon.png
     - assets/data/names99.json
+    - assets/data/nawawi_40_hadith_ar.json
     - assets/audio/
     - assets/audio/adhan/
     - assets/quran/

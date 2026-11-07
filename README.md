@@ -13,6 +13,13 @@ This branch is a personal development edition based on the upstream [Aya Islamic
 - The assistant is source-grounded retrieval, not free-form AI generation or an independent fatwa service. It refuses to invent a ruling when local sources return no match.
 - A dedicated GitHub Actions workflow builds one optimized ARM64 Android Release APK for the `fdroid` flavor and uploads it as a workflow artifact.
 
+## Islamic knowledge expansion (Qalam Muslim branch)
+
+- First-launch Sadaqah Jariyah dedication screen with optional Arabic text-to-speech for the named beneficiaries.
+- A locally bundled Arabic collection of 42 Nawawi Hadith entries with narrator, collection, favorites, search, and individual source links.
+- A Worship & Islamic Life Center for daily deeds, fasting records, Hajj/Umrah checklists, Sadaqah ideas, the five pillars, and funeral dua reminders.
+- Open-source inputs and adaptation boundaries are documented in [OPEN_SOURCE_INTEGRATIONS.md](docs/OPEN_SOURCE_INTEGRATIONS.md).
+
 ### Build this branch
 
 ```bash

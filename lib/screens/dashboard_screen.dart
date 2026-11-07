@@ -23,6 +23,8 @@ import 'assistant_screen.dart';
 import 'sheikh_ahmed_screen.dart';
 import 'wird_qadaa_screen.dart';
 import 'asma_ul_husna_screen.dart';
+import 'nawawi_40_hadith_screen.dart';
+import 'islamic_life_center_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final StorageService storage;
@@ -1091,6 +1093,38 @@ class _DashboardScreenState extends State<DashboardScreen>
                           MaterialPageRoute(
                             builder: (context) =>
                                 SheikhAhmedScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.volunteer_activism_rounded,
+                      title: TranslationService.isArabic
+                          ? 'مركز العبادات والحياة الإسلامية'
+                          : 'Worship & Islamic Life Center',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                IslamicLifeCenterScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.menu_book_rounded,
+                      title: TranslationService.isArabic
+                          ? 'الأربعون النووية (٤٢ حديثًا)'
+                          : 'Nawawi Hadiths (42)',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                Nawawi40HadithScreen(storage: widget.storage),
                           ),
                         );
                       },
