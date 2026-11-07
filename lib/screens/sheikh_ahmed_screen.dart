@@ -474,17 +474,23 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
   Future<void> _prepareVoiceAssistant() async {
     if (_assistantBusy) return;
     _assistantVoiceDownloadCancelled = false;
+
+    // Voice generation has a separate model licence. Declining it must not
+    // block the free local chat model or the text-only assistant.
+    final useLocalVoiceModels = _offlineVoiceReady ||
+        await _ensureSupertonicLicenseAccepted();
+    if (!mounted) return;
+
     const voiceBytes = OfflineArabicVoiceService.totalModelDownloadBytes;
     const chatBytes = LocalAiAssistantService.expectedModelBytes;
-    const voiceProgressShare =
-        voiceBytes / (voiceBytes + chatBytes);
-    if (!_offlineVoiceReady &&
-        !await _ensureSupertonicLicenseAccepted()) {
-      _toast('يجب قبول شروط استخدام نموذج الصوت قبل تنزيله.');
-      return;
-    }
+    const voiceProgressShare = voiceBytes / (voiceBytes + chatBytes);
+
     if (_assistantReady) {
-      if (!_offlineVoiceReady) {
+      if (useLocalVoiceModels && !_offlineVoiceReady) {
+        setState(() {
+          _assistantBusy = true;
+          _assistantModelStatus = 'جارٍ تجهيز محركي الصوت المحليين...';
+        });
         try {
           await _offlineArabicVoice.initialize(
             onProgress: (progress, status) {
@@ -497,50 +503,74 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
           );
           _offlineVoiceReady = true;
         } catch (error) {
-          _toast('تعذّر تجهيز الصوت المحلي: $error');
+          _offlineVoiceReady = false;
+          if (_assistantVoiceDownloadCancelled) {
+            rethrow;
+          }
+          if (mounted) {
+            setState(() {
+              _assistantModelStatus =
+                  'تعذّر تجهيز الصوت المحلي؛ المحادثة النصية ما زالت جاهزة: $error';
+            });
+          }
+        } finally {
+          if (mounted) setState(() => _assistantBusy = false);
         }
       }
-      if (_offlineVoiceReady || _speechReady) {
-        await _startVoiceAssistant();
-      } else {
-        _toast('لا تتوفر خدمة التعرف الصوتي. تحقق من الميكروفون أو اتصال تنزيل المحرك المحلي.');
-      }
+      await _startVoiceAssistant();
       return;
     }
 
     setState(() {
       _assistantBusy = true;
       _assistantDownloadProgress = 0;
-      _assistantModelStatus = 'جارٍ تجهيز المساعد الصوتي المحلي...';
+      _assistantModelStatus = useLocalVoiceModels
+          ? 'جارٍ تجهيز المساعد المجاني — دون مفتاح API...'
+          : 'جارٍ تجهيز المحادثة المحلية المجانية — دون محرك صوت إضافي...';
     });
+
     try {
-      try {
-        await _offlineArabicVoice.initialize(
-          onProgress: (progress, status) {
-            if (!mounted) return;
+      if (useLocalVoiceModels && !_offlineVoiceReady) {
+        try {
+          await _offlineArabicVoice.initialize(
+            onProgress: (progress, status) {
+              if (!mounted) return;
+              setState(() {
+                _assistantDownloadProgress = progress * voiceProgressShare;
+                _assistantModelStatus = status;
+              });
+            },
+          );
+          _offlineVoiceReady = true;
+        } catch (voiceError) {
+          _offlineVoiceReady = false;
+          if (_assistantVoiceDownloadCancelled) {
+            throw StateError('أُلغي تنزيل محرك الصوت المحلي.');
+          }
+          if (mounted) {
             setState(() {
-              _assistantDownloadProgress = progress * voiceProgressShare;
-              _assistantModelStatus = status;
+              _assistantModelStatus =
+                  'تعذّر تجهيز الصوت المحلي؛ سأتابع بالمحادثة النصية المجانية وصوت الهاتف إن توفر: $voiceError';
             });
-          },
-        );
-        _offlineVoiceReady = true;
-      } catch (voiceError) {
-        _offlineVoiceReady = false;
-        if (_assistantVoiceDownloadCancelled) {
-          throw StateError('أُلغي تنزيل محرك الصوت المحلي.');
+          }
         }
-        if (!_speechReady) rethrow;
+      } else if (!useLocalVoiceModels) {
+        _offlineVoiceReady = false;
         if (mounted) {
-          setState(() => _assistantModelStatus =
-              'تعذّر المحرك المحلي؛ سيُستخدم صوت الهاتف: $voiceError');
+          setState(() {
+            _assistantDownloadProgress = 0;
+            _assistantModelStatus =
+                'وضع المحادثة النصية المجانية — دون مفتاح API أو تنزيل محرك صوت إضافي';
+          });
         }
       }
 
       if (!await _localAssistant.isModelDownloaded()) {
         if (mounted) {
           setState(() {
-            _assistantDownloadProgress = _offlineVoiceReady ? voiceProgressShare : 0;
+            _assistantDownloadProgress = _offlineVoiceReady
+                ? voiceProgressShare
+                : 0;
             _assistantModelStatus =
                 'تنزيل نموذج الحوار المحلي — نحو 528 ميجابايت؛ بلا رسوم API';
           });
@@ -550,32 +580,44 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
             if (!mounted) return;
             setState(() {
               _assistantDownloadProgress =
-                  (_offlineVoiceReady ? voiceProgressShare : 0) + progress *
-                      (_offlineVoiceReady ? 1 - voiceProgressShare : 1);
+                  (_offlineVoiceReady ? voiceProgressShare : 0) +
+                      progress *
+                          (_offlineVoiceReady ? 1 - voiceProgressShare : 1);
               _assistantModelStatus =
-                  'تنزيل نموذج الحوار ${(progress * 100).round()}%';
+                  'تنزيل نموذج الحوار المجاني ${(progress * 100).round()}%';
             });
           },
         );
+      } else if (mounted) {
+        setState(() {
+          _assistantDownloadProgress = 1;
+          _assistantModelStatus =
+              'تم العثور على نموذج الحوار المحفوظ — لا حاجة إلى إعادة تنزيله';
+        });
       }
+
       if (!mounted) return;
-      setState(() => _assistantModelStatus = 'جارٍ تحميل نموذج الحوار في ذاكرة الهاتف...');
+      setState(() {
+        _assistantModelStatus = 'جارٍ تحميل نموذج الحوار في ذاكرة الهاتف...';
+      });
       await _localAssistant.loadModel();
       if (!mounted) return;
+
       setState(() {
         _assistantReady = true;
         final speed = _localAssistant.gpuAccelerationEnabled
             ? 'GPU'
             : 'CPU';
         _assistantModelStatus = _offlineVoiceReady
-            ? 'المساعد جاهز — مجاني، بلا API · صوت محلي · $speed'
-            : 'المساعد جاهز — مجاني، بلا API · $speed';
+            ? 'المساعد جاهز — مجاني بلا API · حوار وصوت محلي · $speed'
+            : (_speechReady || _ttsReady)
+                ? 'المساعد جاهز — مجاني بلا API · صوت الهاتف متاح · $speed'
+                : 'المحادثة النصية جاهزة — مجانية بلا API · اكتب سؤالك · $speed';
       });
-      if (_offlineVoiceReady || _speechReady) {
-        await _startVoiceAssistant();
-      } else {
-        _toast('تم تجهيز نموذج الحوار، لكن تعذّر تجهيز محرك الصوت. أعد المحاولة بعد التحقق من الاتصال والميكروفون.');
-      }
+
+      // Always open the local chat session. Microphone and speech output are
+      // optional; the text composer remains available without either engine.
+      await _startVoiceAssistant();
     } catch (error) {
       if (mounted) {
         final cancelled = _assistantVoiceDownloadCancelled ||
@@ -583,9 +625,13 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         setState(() {
           _assistantModelStatus = cancelled
               ? 'أُلغي التنزيل.'
-              : 'تعذّر تجهيز المساعد: $error';
+              : 'تعذّر تجهيز نموذج الحوار: $error';
         });
-        if (!cancelled) _toast('تحقق من مساحة التخزين والاتصال ثم أعد المحاولة.');
+        if (!cancelled) {
+          _toast(
+            'تعذّر تجهيز نموذج المحادثة. تحقق من اتصال التنزيل ومساحة التخزين ثم أعد المحاولة.',
+          );
+        }
       }
     } finally {
       if (mounted) setState(() => _assistantBusy = false);
