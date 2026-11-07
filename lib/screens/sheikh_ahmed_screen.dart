@@ -302,6 +302,17 @@ class _SheikhAhmedScreenState extends State<SheikhAhmedScreen>
         orElse: () => arabicLanguages.first,
       );
 
+      // On Android, distinguish a locale supported by the engine from a
+      // voice that is actually installed and available for offline use.
+      if (Platform.isAndroid) {
+        final installed = await _tts.isLanguageInstalled(arabicLocale);
+        if (installed != true) {
+          _ttsReady = false;
+          if (mounted) setState(() {});
+          return;
+        }
+      }
+
       await _tts.setLanguage(arabicLocale);
       await _tts.setSpeechRate(0.46);
       await _tts.setPitch(1.0);
