@@ -84,9 +84,22 @@ if ! grep -q "package=${APP_ID}" dist/app-window-after-launch.txt ||
   exit 1
 fi
 
+if grep -E "table surahs already exists|DatabaseException.*table surahs" dist/android-launch-log.txt; then
+  echo "Qalam Muslim failed while bootstrapping its bundled Quran database."
+  exit 1
+fi
+
 if grep -E "FATAL EXCEPTION|Process: ${APP_ID}|ANR in ${APP_ID}|Application Not Responding: ${APP_ID}" dist/android-launch-log.txt; then
   echo "A fatal exception or application ANR was recorded."
   exit 1
 fi
 
-echo "PASS: application installed, process remained alive, MainActivity stayed resumed, and its window rendered on Android 11."
+# A visible Android system/System UI ANR dialog can cover the application
+# while its Activity and surface still exist. Do not report a clean launch
+# while one of these blocking dialogs remains on screen.
+if grep -Eq "Application Not Responding: (system|com\\.android\\.systemui)|package=android appop=SYSTEM_ALERT_WINDOW" dist/window-after-launch.txt; then
+  echo "Android displayed a system/System UI ANR dialog over the application."
+  exit 1
+fi
+
+echo "PASS: application installed, process remained alive, MainActivity stayed resumed, its window rendered, and no ANR dialog obscured it on Android 11."
