@@ -132,7 +132,7 @@ class _AyaAppState extends State<AyaApp> {
         );
 
         return MaterialApp(
-          title: 'Qalam Muslim - Islamic App',
+          title: TranslationService.isArabic ? 'قلم مسلم' : 'Qalam Muslim',
           debugShowCheckedModeBanner: false,
           theme: themeData,
           locale: Locale(TranslationService.currentLanguage),
