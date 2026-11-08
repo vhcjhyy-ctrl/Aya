@@ -132,6 +132,44 @@ class AboutScreen extends StatelessWidget {
                 ),
               ),
             ),
+            const SizedBox(height: 8),
+            Card(
+              color: theme.cardColor,
+              child: ListTile(
+                leading: Icon(Icons.description_outlined, color: theme.colorScheme.primary),
+                title: Text(isArabic ? "إشعار ترخيص المشروع" : "Project license notice"),
+                subtitle: Text(
+                  isArabic
+                      ? "عرض نص الترخيص القانوني للمكوّنات مفتوحة المصدر."
+                      : "View the legal license notice for the open-source project components.",
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () async {
+                  final notice = await rootBundle.loadString(
+                    'assets/licenses/NOTICE_AYA_UPSTREAM_MIT.txt',
+                  );
+                  if (!context.mounted) return;
+                  await showDialog<void>(
+                    context: context,
+                    builder: (dialogContext) => AlertDialog(
+                      title: Text(isArabic ? "إشعار الترخيص" : "License notice"),
+                      content: SingleChildScrollView(
+                        child: SelectableText(
+                          notice,
+                          style: const TextStyle(fontSize: 12, height: 1.5),
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: Text(isArabic ? "إغلاق" : "Close"),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
 
             const SizedBox(height: 40),
             Text(
