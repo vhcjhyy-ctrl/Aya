@@ -10,6 +10,7 @@ import '../services/api_service.dart';
 import '../services/audio_manager.dart';
 import '../models/prayer_models.dart';
 import '../widgets/audio_player_overlay.dart';
+import '../widgets/memorial_dua_dialog.dart';
 import 'dashboard_screen.dart';
 import 'quran_screen.dart';
 import 'hadith_screen.dart';
@@ -52,6 +53,16 @@ class _MainScaffoldState extends State<MainScaffold>
     _loadLastBookmark();
     _applyWakeLockOnLaunch();
 
+    // Show the family memorial supplication on every fresh app launch.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(
+        Future<void>.delayed(
+          const Duration(milliseconds: 600),
+          _showMemorialDua,
+        ),
+      );
+    });
+
     _notificationSubscription = NotificationService
         .selectNotificationStream
         .stream
@@ -89,6 +100,19 @@ class _MainScaffoldState extends State<MainScaffold>
 
     _rescheduleAllAlarms();
     _fetchLocationOnOpen();
+  }
+
+  void _showMemorialDua() {
+    if (!mounted) return;
+    unawaited(
+      showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => MemorialDuaDialog(
+          onContinue: () => Navigator.of(dialogContext).pop(),
+        ),
+      ),
+    );
   }
 
   Future<void> _fetchLocationOnOpen() async {
