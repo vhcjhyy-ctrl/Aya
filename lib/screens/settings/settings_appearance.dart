@@ -43,9 +43,7 @@ extension SettingsAppearanceSection on _SettingsScreenState {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Column(
+          child: Column(
               children: [
                 // App Language
                 ListTile(
