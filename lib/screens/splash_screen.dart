@@ -35,7 +35,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2500),
+      duration: const Duration(milliseconds: 900),
     );
 
     _logoScaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
@@ -55,7 +55,7 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
 
     // Navigate to next screen after animation completes
-    Future.delayed(const Duration(milliseconds: 2800), () async {
+    Future.delayed(const Duration(milliseconds: 1050), () async {
       if (!mounted) return;
 
       final isFirstTime = widget.storage.getBool(
@@ -114,7 +114,7 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               );
             },
-            transitionDuration: const Duration(milliseconds: 500),
+            transitionDuration: const Duration(milliseconds: 300),
           ),
         );
       }
@@ -243,20 +243,7 @@ class _SplashScreenState extends State<SplashScreen>
                         ),
                       ),
                       const SizedBox(height: 14),
-                      Text(
-                        TranslationService.isArabic
-                            ? "برمجة وتطوير\nالمهندس أحمد محمد الزبلاوي"
-                            : "Developed by\nEngineer Ahmed Mohammed Al-Zabllawy",
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 11,
-                          height: 1.6,
-                          fontWeight: FontWeight.w600,
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.62)
-                              : Colors.black54,
-                        ),
+
                       ),
                     ],
                   ),
