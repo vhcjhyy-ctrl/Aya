@@ -20,9 +20,9 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 REPOSITORY = "simolus3/sqlite3.dart"
-TAG_PATTERN = re.compile(r"^sqlite3-3\\.5\\.2$")
+TAG_PATTERN = re.compile(r"^sqlite3-3\.5\.2$")
 FILENAME_PATTERN = re.compile(
-    r"^libsqlite3\\.(?:arm64|x64)\\.(?:android|linux)\\.so$"
+    r"^libsqlite3\.(?:arm64|x64)\.(?:android|linux)\.so$"
 )
 API_ROOT = f"https://api.github.com/repos/{REPOSITORY}"
 RELEASE_CACHE: dict[str, dict] = {}
