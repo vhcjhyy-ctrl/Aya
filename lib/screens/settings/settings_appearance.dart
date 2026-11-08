@@ -251,7 +251,6 @@ extension SettingsAppearanceSection on _SettingsScreenState {
             ),
           ),
         ),
-      ),
     ];
   }
 }
