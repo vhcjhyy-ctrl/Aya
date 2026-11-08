@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
@@ -38,6 +37,7 @@ class MainScaffold extends StatefulWidget {
 class _MainScaffoldState extends State<MainScaffold>
     with WidgetsBindingObserver {
   int _currentTab = 0;
+  final Set<int> _loadedTabs = <int>{0};
   int _azkarInitialTab = 0;
   int _prayerInitialTab = 0;
   int? _hadithInitialNumber;
@@ -58,23 +58,13 @@ class _MainScaffoldState extends State<MainScaffold>
         .listen((payload) {
           if (payload == null) return;
           if (payload == 'prayer_times') {
-            setState(() {
-              _currentTab = 2;
-            });
+            _selectTab(2);
           } else if (payload == 'azkar_morning') {
-            setState(() {
-              _azkarInitialTab = 0;
-              _currentTab = 3;
-            });
+            _selectTab(4, subTab: 0);
           } else if (payload == 'azkar_evening') {
-            setState(() {
-              _azkarInitialTab = 1;
-              _currentTab = 3;
-            });
+            _selectTab(4, subTab: 1);
           } else if (payload.startsWith('quran_verse')) {
-            setState(() {
-              _currentTab = 1;
-            });
+            _selectTab(1);
 
             final parts = payload.split(':');
             if (parts.length >= 3) {
@@ -89,6 +79,19 @@ class _MainScaffoldState extends State<MainScaffold>
 
     _rescheduleAllAlarms();
     _fetchLocationOnOpen();
+  }
+
+  void _selectTab(int index, {int? subTab}) {
+    if (index < 0 || index >= 5) return;
+    setState(() {
+      _currentTab = index;
+      _loadedTabs.add(index);
+      if (index == 4 && subTab != null) {
+        _azkarInitialTab = subTab;
+      } else if (index == 3 && subTab != null) {
+        _prayerInitialTab = subTab;
+      }
+    });
   }
 
   Future<void> _fetchLocationOnOpen() async {
@@ -220,9 +223,7 @@ class _MainScaffoldState extends State<MainScaffold>
     final surahNum = lastBookmark['surahNumber'] as int;
     final ayahNum = lastBookmark['ayahNumber'] as int;
 
-    setState(() {
-      _currentTab = 1;
-    });
+    _selectTab(1);
 
     try {
       final surahs = await ApiService.fetchSurahList();
@@ -275,14 +276,7 @@ class _MainScaffoldState extends State<MainScaffold>
           } else if (index == 3) {
             targetTab = 4;
           }
-          setState(() {
-            _currentTab = targetTab;
-            if (targetTab == 4 && subTab != null) {
-              _azkarInitialTab = subTab;
-            } else if (targetTab == 3 && subTab != null) {
-              _prayerInitialTab = subTab;
-            }
-          });
+          _selectTab(targetTab, subTab: subTab);
         },
         onContinueReading: _navigateToBookmark,
       ),
@@ -312,9 +306,7 @@ class _MainScaffoldState extends State<MainScaffold>
       onPopInvoked: (didPop) async {
         if (didPop) return;
         if (_currentTab != 0) {
-          setState(() {
-            _currentTab = 0;
-          });
+          _selectTab(0);
           return;
         }
         final now = DateTime.now();
@@ -395,6 +387,7 @@ class _MainScaffoldState extends State<MainScaffold>
                   if (result['tab'] != null) {
                     setState(() {
                       _currentTab = result['tab'];
+                      _loadedTabs.add(result['tab'] as int);
                       if (result['tab'] == 2) {
                         _hadithInitialNumber = result['hadithNumber'];
                         _hadithInitialBookId = result['bookId'];
@@ -425,7 +418,15 @@ class _MainScaffoldState extends State<MainScaffold>
           builder: (context, audioState, child) {
             return Stack(
               children: [
-                IndexedStack(index: _currentTab, children: screens),
+                IndexedStack(
+                  index: _currentTab,
+                  children: List<Widget>.generate(
+                    screens.length,
+                    (index) => _loadedTabs.contains(index)
+                        ? screens[index]
+                        : const SizedBox.shrink(),
+                  ),
+                ),
                 if (_currentTab == 1)
                   AudioPlayerOverlay(
                     bottomPosition: bottomNavbarStyle == 'floating'
@@ -443,11 +444,7 @@ class _MainScaffoldState extends State<MainScaffold>
         bottomNavigationBar: () {
           final bottomBarWidget = BottomNavigationBar(
             currentIndex: _currentTab,
-            onTap: (index) {
-              setState(() {
-                _currentTab = index;
-              });
-            },
+            onTap: (index) => _selectTab(index),
             type: BottomNavigationBarType.fixed,
             selectedFontSize: 11,
             unselectedFontSize: 11,
@@ -504,8 +501,8 @@ class _MainScaffoldState extends State<MainScaffold>
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(28.0),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding: EdgeInsets.zero,
                     child: Container(
                       decoration: BoxDecoration(
                         color: theme.cardColor.withValues(alpha: 0.85),
