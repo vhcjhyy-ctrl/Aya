@@ -6,10 +6,9 @@ extension SettingsAboutSection on _SettingsScreenState {
     final primary = theme.colorScheme.primary;
 
     return [
-      // Section About & Support
       SettingsSectionHeader(
         icon: Icons.info_outline,
-        title: isAr ? "عن التطبيق والدعم" : "About & Support",
+        title: isAr ? 'عن التطبيق' : 'About the app',
       ),
       Card(
         color: theme.cardColor.withValues(alpha: 0.7),
@@ -17,7 +16,7 @@ extension SettingsAboutSection on _SettingsScreenState {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(
-            color: (Theme.of(context).textTheme.bodyLarge?.color ?? Colors.white)
+            color: (theme.textTheme.bodyLarge?.color ?? Colors.white)
                 .withValues(alpha: 0.1),
           ),
         ),
@@ -25,46 +24,25 @@ extension SettingsAboutSection on _SettingsScreenState {
           borderRadius: BorderRadius.circular(16),
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-            child: Column(
-              children: [
-                ListTile(
-                  leading: Icon(Icons.info_outline, color: primary),
-                  title: Text(
-                    isAr ? "حول تطبيق آية" : "About Aya App",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    isAr ? "معلومات الإصدار وتفاصيل الحقوق والتطوير" : "App version, licenses, and development credits",
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const AboutScreen()),
-                    );
-                  },
-                ),
-                Divider(
-                  height: 1,
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                ),
-                ListTile(
-                  leading: Icon(Icons.volunteer_activism_outlined, color: primary),
-                  title: Text(
-                    isAr ? "دعم تطبيق آية" : "Support Aya App",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    isAr
-                        ? "ساهم في دعم استضافة التطبيق وتطويره بدون إعلانات"
-                        : "Support server costs and development, ad-free continuous charity",
-                    style: const TextStyle(fontSize: 12),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _showDonateDialog,
-                ),
-              ],
+            child: ListTile(
+              leading: Icon(Icons.info_outline, color: primary),
+              title: Text(
+                isAr ? 'حول قلم مسلم' : 'About Qalam Muslim',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Text(
+                isAr
+                    ? 'معلومات الإصدار والمصدر المفتوح والتراخيص'
+                    : 'Version, open-source code, and license information',
+                style: const TextStyle(fontSize: 12),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const AboutScreen()),
+                );
+              },
             ),
           ),
         ),
