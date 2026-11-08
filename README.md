@@ -1,4 +1,4 @@
-# Qalam Muslim Development Branch\n\n## Qalam Muslim — Developer Edition
+# Qalam Muslim Development Branch\n\n## Qalam Muslim — Android Application
 
 This branch is a personal development edition based on the upstream [Aya Islamic Companion](https://github.com/Cancelllls/Aya) project. The upstream repository remains unchanged. Required upstream copyright and license notices remain in the repository's license files; personal developer credits and donation prompts are not displayed in the Qalam Muslim app.
 
@@ -177,13 +177,13 @@ lib/
 │   ├── splash_screen.dart            # Animated Islamic logo + auto language detect
 │   ├── welcome_screen.dart           # 3-page onboarding: intro, features, permissions
 │   └── settings/                     # 7 part files (glassmorphism cards)
-│       ├── settings_screen.dart      # Master state, donation, version display
+│       ├── settings_screen.dart      # Master state, preferences, version display
 │       ├── settings_appearance.dart  # Theme preset, nav style, Quran font
 │       ├── settings_calculations.dart # Prayer method, Asr school
 │       ├── settings_notifications.dart   # Adhan/pre-adhan, Ramadan, Islamic events
 │       ├── settings_audio.dart       # Continuous play, auto-bookmark, refresh reciters
 │       ├── settings_permissions.dart # Exact alarm, keep screen awake
-│       ├── settings_about.dart       # About Aya, developer credits, support & donations
+│       ├── settings_about.dart       # About Qalam Muslim and software licenses
 │       └── settings_backup.dart      # Export/import via share sheet or file picker
 │
 ├── services/
@@ -333,7 +333,6 @@ Aya is built on the shoulders of giants. All data is either bundled, cached, or 
 | [Audioplayers](https://pub.dev/packages/audioplayers) | Quran audio playback | Streaming + offline MP3 |
 | [sqflite + sqflite_common_ffi](https://pub.dev/packages/sqflite) | SQLite with FTS5 on all platforms | Bundled SQLite binary |
 | [Share Plus](https://pub.dev/packages/share_plus) | Backup export sharing | Android share sheet |
-| [In-App Purchase](https://pub.dev/packages/in_app_purchase) | Google Play donations | Consumable IAP products |
 | [Amiri Font](https://fonts.google.com/specimen/Amiri) | Quranic Arabic text rendering | Google Fonts |
 | [Scheherazade New](https://fonts.google.com/specimen/Scheherazade+New) | Alternative Quran font | Google Fonts |
 
