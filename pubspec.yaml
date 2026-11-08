@@ -66,7 +66,7 @@ dependencies:
   dorar_hadith: ^0.5.0
   dorar_hadith_flutter: ^0.5.0
   sqlite3_flutter_libs: ^0.5.42
-  sqlite3: ^3.6.0
+  sqlite3: 3.5.2
   visibility_detector: ^0.4.0+2
   share_plus: ^13.3.0
   sqflite_common_ffi: ^2.4.2
@@ -83,15 +83,12 @@ dev_dependencies:
   rename: ^3.1.0
   flutter_launcher_icons: ^0.14.4
 
-# Use the native SQLite libraries packaged in the Android app and system
-# SQLite on Linux CI; other platforms retain sqlite3's verified binaries.
+# Load the FTS5-enabled shared library shipped by sqlite3_flutter_libs.
+# Linux CI provides libsqlite3-dev through the workflow setup.
 hooks:
   user_defines:
     sqlite3:
-      source:
-        android: system
-        linux: system
-        default: sqlite3
+      source: system
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
