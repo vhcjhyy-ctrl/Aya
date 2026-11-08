@@ -1,6 +1,6 @@
 # Qalam Muslim Development Branch\n\n## Qalam Muslim — Developer Edition
 
-This branch is a personal development edition based on the upstream [Aya Islamic Companion](https://github.com/Cancelllls/Aya) project. The upstream repository remains unchanged, and the original developer attribution is retained in the app.
+This branch is a personal development edition based on the upstream [Aya Islamic Companion](https://github.com/Cancelllls/Aya) project. The upstream repository remains unchanged. Required upstream copyright and license notices remain in the repository's license files; personal developer credits and donation prompts are not displayed in the Qalam Muslim app.
 
 ### Additions in this branch
 
