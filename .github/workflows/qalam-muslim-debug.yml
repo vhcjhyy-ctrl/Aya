@@ -41,6 +41,24 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Start verified SQLite native-asset proxy
+        run: |
+          nohup python3 .github/scripts/sqlite_asset_proxy.py --port 8765 > /tmp/qalam-sqlite-proxy.log 2>&1 &
+          for attempt in $(seq 1 20); do
+            if curl --silent --fail http://127.0.0.1:8765/health >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          curl --silent --show-error --fail http://127.0.0.1:8765/health
+          cat >> pubspec.yaml <<'SQLITE_HOOKS'
+          
+          hooks:
+            user_defines:
+              sqlite3:
+                url_pattern: "http://127.0.0.1:8765/$RELEASE_TAG/$FILENAME"
+          SQLITE_HOOKS
+
       - name: Configure persistent Android release signing
         env:
           QALAM_RELEASE_KEYSTORE_BASE64: ${{ secrets.QALAM_RELEASE_KEYSTORE_BASE64 }}
