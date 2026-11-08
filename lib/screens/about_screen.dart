@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../services/translation_service.dart';
 import '../version.dart';
 
@@ -113,82 +112,23 @@ class AboutScreen extends StatelessWidget {
             ),
 
             const SizedBox(height: 32),
-            _sectionHeader(theme, isArabic ? "المطور" : "Developer"),
+            _sectionHeader(theme, isArabic ? "التراخيص" : "Licenses"),
             const SizedBox(height: 12),
             Card(
               color: theme.cardColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFFE5C158).withValues(alpha: 0.18),
-                        child: const Icon(Icons.engineering, color: Color(0xFFE5C158)),
-                      ),
-                      title: const Text(
-                        "المهندس أحمد محمد الزبلاوي",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        isArabic
-                            ? "تطوير وإضافات نسخة قلم مسلم"
-                            : "Development and enhancements for Qalam Muslim",
-                      ),
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: theme.primaryColor.withValues(alpha: 0.2),
-                        child: Icon(Icons.person, color: theme.primaryColor),
-                      ),
-                      title: const Text(
-                        "Abdalrahman Samir",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        isArabic
-                            ? "المطور الأصلي لتطبيق آية — صُنع بكل حب لخدمة الإسلام"
-                            : "Original developer of Aya — made with love to serve Islam",
-                      ),
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFFE5C158).withValues(alpha: 0.15),
-                        child: const Icon(Icons.auto_awesome, color: Color(0xFFE5C158), size: 20),
-                      ),
-                      title: Text(
-                        isArabic
-                            ? "شكر خاص لـ AYA"
-                            : "Special Thanks to AYA",
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-                        child: const Icon(Icons.code, color: Color(0xFFE5C158), size: 20),
-                      ),
-                      title: const Text(
-                        "github.com/Cancelllls/Aya",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        isArabic ? "المستودع مفتوح المصدر" : "Open-source repository",
-                      ),
-                      onTap: () async {
-                        final url = Uri.parse('https://github.com/Cancelllls/Aya');
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        }
-                      },
-                    ),
-                  ],
+              child: ListTile(
+                leading: Icon(Icons.policy_outlined, color: theme.colorScheme.primary),
+                title: Text(isArabic ? "تراخيص البرمجيات مفتوحة المصدر" : "Open-source software licenses"),
+                subtitle: Text(
+                  isArabic
+                      ? "إشعارات حقوق النشر والتراخيص محفوظة وفق شروط كل مشروع."
+                      : "Copyright and license notices are retained according to each project's terms.",
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showLicensePage(
+                  context: context,
+                  applicationName: isArabic ? "قلم مسلم" : "Qalam Muslim",
+                  applicationVersion: appVersion,
                 ),
               ),
             ),
