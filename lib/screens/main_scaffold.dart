@@ -45,6 +45,8 @@ class _MainScaffoldState extends State<MainScaffold>
   String? _hadithInitialBookId;
   DateTime? _lastPressedAt;
   StreamSubscription<String?>? _notificationSubscription;
+  bool _memorialDialogVisible = false;
+  bool _showMemorialDuaOnResume = false;
 
   @override
   void initState() {
@@ -55,12 +57,7 @@ class _MainScaffoldState extends State<MainScaffold>
 
     // Show the family memorial supplication on every fresh app launch.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      unawaited(
-        Future<void>.delayed(
-          const Duration(milliseconds: 600),
-          _showMemorialDua,
-        ),
-      );
+      if (mounted) unawaited(_showMemorialDua());
     });
 
     _notificationSubscription = NotificationService
@@ -102,17 +99,20 @@ class _MainScaffoldState extends State<MainScaffold>
     _fetchLocationOnOpen();
   }
 
-  void _showMemorialDua() {
-    if (!mounted) return;
-    unawaited(
-      showDialog<void>(
+  Future<void> _showMemorialDua() async {
+    if (!mounted || _memorialDialogVisible) return;
+    _memorialDialogVisible = true;
+    try {
+      await showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) => MemorialDuaDialog(
           onContinue: () => Navigator.of(dialogContext).pop(),
         ),
-      ),
-    );
+      );
+    } finally {
+      _memorialDialogVisible = false;
+    }
   }
 
   Future<void> _fetchLocationOnOpen() async {
@@ -179,9 +179,17 @@ class _MainScaffoldState extends State<MainScaffold>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _showMemorialDuaOnResume = true;
+      return;
+    }
     if (state == AppLifecycleState.resumed) {
       _checkAlarmPermissionChange();
       _loadLastBookmark();
+      if (_showMemorialDuaOnResume) {
+        _showMemorialDuaOnResume = false;
+        unawaited(_showMemorialDua());
+      }
     }
   }
 
