@@ -71,8 +71,8 @@ extension SettingsPermissionsSection on _SettingsScreenState {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(
+            padding: EdgeInsets.zero,
             child: Column(
               children: [
                 _buildPermissionStatusTile(
