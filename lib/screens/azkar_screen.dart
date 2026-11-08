@@ -364,7 +364,7 @@ class _AzkarScreenState extends State<AzkarScreen>
                   Navigator.pop(ctx);
                   SharePlus.instance.share(
                     ShareParams(
-                      text: '${item.arabic}\n\n— ${isAr ? "أذكاري" : "My Azkar"} • Aya App',
+                      text: '${item.arabic}\n\n— ${isAr ? "أذكاري" : "My Azkar"} • قلم مسلم',
                     ),
                   );
                 },
