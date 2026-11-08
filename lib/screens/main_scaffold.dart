@@ -58,7 +58,7 @@ class _MainScaffoldState extends State<MainScaffold>
         .listen((payload) {
           if (payload == null) return;
           if (payload == 'prayer_times') {
-            _selectTab(2);
+            _selectTab(3);
           } else if (payload == 'azkar_morning') {
             _selectTab(4, subTab: 0);
           } else if (payload == 'azkar_evening') {
