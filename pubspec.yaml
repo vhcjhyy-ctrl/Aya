@@ -65,11 +65,11 @@ dependencies:
   scroll_to_index: ^3.0.1
   dorar_hadith: ^0.5.0
   dorar_hadith_flutter: ^0.5.0
-  sqlite3_flutter_libs: ^0.6.0+eol
-  sqlite3: 3.5.2
+  sqlite3_flutter_libs: ^0.5.42
+  sqlite3: ^2.9.4
   visibility_detector: ^0.4.0+2
   share_plus: ^13.3.0
-  sqflite_common_ffi: ^2.4.2
+  sqflite_common_ffi: '>=2.3.7 <2.4.0'
 dev_dependencies:
   flutter_test:
     sdk: flutter
