@@ -59,6 +59,7 @@ jobs:
                 source: sqlite3
                 url_pattern: "http://127.0.0.1:8765/$RELEASE_TAG/$FILENAME"
           SQLITE_HOOKS
+          flutter pub get
 
       - name: Configure persistent Android release signing
         env:
