@@ -1,6 +1,33 @@
 {
   "versions": [
     {
+      "version": "1.6.1",
+      "date": "2026-11-08",
+      "title": "Qalam Muslim — Maintenance & Performance Update",
+      "changes": {
+        "en": [
+          "Product identity — Standardized the visible app name as Qalam Muslim and removed personal developer-credit screens",
+          "Support prompts — Removed donation prompts, PayPal links, and unused in-app purchase integration",
+          "Faster navigation — Main sections are created on first visit instead of initializing all tabs at startup",
+          "Lower rendering cost — Replaced expensive background blur effects in navigation and settings with lightweight themed surfaces",
+          "Prayer notifications — Corrected navigation targets for prayer-time and morning/evening remembrance notifications",
+          "Theme verification — Added automated checks for light and dark Material 3 theme presets",
+          "Android update path — Increased versionCode while keeping the existing application ID; update installation still requires the same signing certificate",
+          "Licensing — Bundled the upstream MIT license notice and retained open-source dependency license access"
+        ],
+        "ar": [
+          "هوية التطبيق — توحيد الاسم الظاهر إلى قلم مسلم وإزالة شاشات عرض أسماء المطورين",
+          "التبرعات — إزالة طلبات التبرع وروابط PayPal وميزة الشراء داخل التطبيق غير المستخدمة",
+          "تنقل أسرع — إنشاء صفحات القرآن والحديث والصلاة والأذكار عند أول زيارة بدل تهيئتها كلها عند بدء التشغيل",
+          "تقليل الحمل الرسومي — استبدال تأثيرات الضبابية المكلفة في شريط التنقل والإعدادات بواجهات خفيفة متوافقة مع السمة",
+          "تنبيهات الصلاة — إصلاح انتقال إشعارات مواقيت الصلاة وأذكار الصباح والمساء إلى الصفحات الصحيحة",
+          "السمات — إضافة اختبارات تلقائية للتحقق من الوضعين الفاتح والداكن",
+          "تحديث أندرويد — رفع رقم الإصدار مع الحفاظ على معرّف التطبيق؛ ويتطلب التحديث فوق النسخة المثبتة شهادة التوقيع نفسها",
+          "التراخيص — تضمين إشعار ترخيص MIT للمشروع الأصلي والإبقاء على صفحة تراخيص البرمجيات المفتوحة المصدر"
+        ]
+      }
+    },
+    {
       "version": "1.6.0",
       "date": "2026-11-06",
       "title": "Sheikh Ahmed Voice Hifz, Reciter Selection & Performance Refresh",
