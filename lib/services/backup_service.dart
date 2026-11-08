@@ -113,7 +113,7 @@ class BackupService {
       'worship_fasting_log_v1',
     ];
     // Preserve every daily worship record, not only today's checklist.
-    final dailyKeys = storage.getPreferenceKeys()
+    final dailyKeys = StorageService.prefs.getKeys()
         .where((key) => key.startsWith('worship_daily_'))
         .toList(growable: false);
     final appData = <String, String>{};
