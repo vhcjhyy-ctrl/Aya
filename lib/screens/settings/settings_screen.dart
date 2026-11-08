@@ -11,13 +11,10 @@ import '../../services/notification_service.dart';
 import '../../models/prayer_models.dart';
 import '../quran_download_screen.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../services/adhan_audio_service.dart';
 import '../../core/adhan_native_controller.dart';
 import '../../services/reciters_cache_service.dart';
-import '../../donation/flavor.dart';
-import '../../donation/google_play_donation.dart';
 import '../../version.dart';
 import '../about_screen.dart';
 import '../qiraat_screen.dart';
@@ -293,79 +290,6 @@ class _SettingsScreenState extends State<SettingsScreen>
       });
       await widget.storage.setString('athan_stop_gesture', val);
     }
-  }
-
-  void _showDonateDialog() {
-    final isAr = TranslationService.isArabic;
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: Theme.of(context).cardColor,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            isAr ? "دعم وتطوير التطبيق" : "Support Project & Development",
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isAr
-                    ? "تطبيق آية مجاني وخالٍ تماماً من الإعلانات صدقة جارية. يمكنك المساهمة في دعم خوادم وتطوير التطبيق:"
-                    : "Aya is completely free and ad-free as a continuous charity. You can support server costs and development:",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 13, height: 1.4),
-              ),
-              const SizedBox(height: 20),
-              if (kIsGooglePlay) ...[
-                FutureBuilder<Widget?>(
-                  future: GooglePlayDonation.buildIapButtons(context),
-                  builder: (ctx, snap) => snap.data ?? const SizedBox.shrink(),
-                ),
-                const SizedBox(height: 12),
-                const Divider(),
-                const SizedBox(height: 12),
-              ],
-              Text(
-                isAr ? "تبرع عبر باي بال:" : "Donate via PayPal:",
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF003087),
-                  side: const BorderSide(color: Color(0xFF003087)),
-                  minimumSize: const Size(double.infinity, 44),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                icon: const Icon(Icons.payment),
-                label: const Text(
-                  'paypal.me/Cancells',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                onPressed: () {
-                  Navigator.pop(context);
-                  launchUrl(
-                    Uri.parse('https://www.paypal.me/Cancells'),
-                    mode: LaunchMode.externalApplication,
-                  );
-                },
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   Future<void> _changeThemePreset(String? val) async {
