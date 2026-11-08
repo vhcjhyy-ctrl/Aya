@@ -91,7 +91,7 @@ class TranslationService {
       'qari_sub': 'Reciter voice for verse-by-verse audios',
       'system_management': 'System Management',
       'reset_settings': 'Reset Settings',
-      'reset_settings_sub': 'Restore Aya App to factory defaults',
+      'reset_settings_sub': 'Restore Qalam Muslim to factory defaults',
       'app_lang': 'App Language',
       'app_lang_sub': 'Choose between English and Arabic',
       'notification_language': 'Notification Language',
@@ -221,7 +221,7 @@ class TranslationService {
           'Smart tasbih counter and morning, evening, and sleep azkar to track your daily dhikr with ease.',
       'welcome_gps_title': 'GPS Location Setup',
       'welcome_gps_desc':
-          'Aya App uses your GPS location to calculate extremely accurate prayer times and auto-detect your current city.',
+          'Qalam Muslim uses your GPS location to calculate prayer times and detect your current city.',
       'welcome_gps_status_checking': 'Checking location services...',
       'welcome_gps_status_disabled':
           'Location services are disabled in settings.',
@@ -467,7 +467,7 @@ class TranslationService {
           'عداد تسبيح ذكي وأذكار الصباح والمساء والنوم لتتبع وردك اليومي بسهولة.',
       'welcome_gps_title': 'إعداد الموقع الجغرافي (GPS)',
       'welcome_gps_desc':
-          'يستخدم تطبيق "آية" موقعك الجغرافي لتحديد إحداثياتك وحساب مواقيت الصلاة بدقة فائقة وعرض اسم مدينتك تلقائياً.',
+          'يستخدم تطبيق "قلم مسلم" موقعك الجغرافي لتحديد إحداثياتك وحساب مواقيت الصلاة وعرض اسم مدينتك تلقائياً.',
       'welcome_gps_status_checking': 'جاري التحقق من خدمات الموقع...',
       'welcome_gps_status_disabled': 'خدمات الموقع معطلة في إعدادات الهاتف.',
       'welcome_gps_status_requesting': 'جاري طلب صلاحيات الموقع...',
