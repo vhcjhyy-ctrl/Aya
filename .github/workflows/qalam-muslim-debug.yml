@@ -41,6 +41,27 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Configure persistent Android release signing
+        env:
+          QALAM_RELEASE_KEYSTORE_BASE64: ${{ secrets.QALAM_RELEASE_KEYSTORE_BASE64 }}
+          QALAM_RELEASE_STORE_PASSWORD: ${{ secrets.QALAM_RELEASE_STORE_PASSWORD }}
+          QALAM_RELEASE_KEY_ALIAS: ${{ secrets.QALAM_RELEASE_KEY_ALIAS }}
+          QALAM_RELEASE_KEY_PASSWORD: ${{ secrets.QALAM_RELEASE_KEY_PASSWORD }}
+        run: |
+          if [ -n "$QALAM_RELEASE_KEYSTORE_BASE64" ]; then
+            printf '%s' "$QALAM_RELEASE_KEYSTORE_BASE64" | base64 --decode > android/qalam-release.jks
+            cat > android/key.properties <<EOF
+          storeFile=qalam-release.jks
+          storePassword=$QALAM_RELEASE_STORE_PASSWORD
+          keyAlias=$QALAM_RELEASE_KEY_ALIAS
+          keyPassword=$QALAM_RELEASE_KEY_PASSWORD
+          EOF
+            chmod 600 android/key.properties android/qalam-release.jks
+            echo "Persistent Android signing key configured."
+          else
+            echo "::warning::No persistent Qalam Muslim release key is configured. This build will use the runner's debug key and is not guaranteed to update an existing installation."
+          fi
+
       - name: Analyze Dart source
         run: flutter analyze --no-pub --no-fatal-warnings --no-fatal-infos
 
@@ -58,8 +79,10 @@ jobs:
           BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
           "$BUILD_TOOLS/aapt" dump badging dist/qalam-muslim-arm64-release.apk | tee dist/apk-badging.txt
           grep -q "package: name='com.ahmed.qalammuslim'" dist/apk-badging.txt
+          grep -q "versionCode='10601' versionName='1.6.1'" dist/apk-badging.txt
           grep -q "application-icon" dist/apk-badging.txt
           test -s dist/qalam-muslim-arm64-release.apk
+          "$BUILD_TOOLS/apksigner" verify --print-certs dist/qalam-muslim-arm64-release.apk | tee dist/apk-signing.txt
           unzip -l dist/qalam-muslim-arm64-release.apk | tee dist/arm64-apk-contents.txt
           grep -Eq 'lib/arm64-v8a/libapp\.so$' dist/arm64-apk-contents.txt
           grep -Eq 'lib/arm64-v8a/libflutter\.so$' dist/arm64-apk-contents.txt
@@ -74,6 +97,7 @@ jobs:
           path: |
             dist/qalam-muslim-arm64-release.apk
             dist/apk-badging.txt
+            dist/apk-signing.txt
             dist/arm64-apk-contents.txt
           if-no-files-found: error
           retention-days: 14
