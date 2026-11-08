@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:aya_app/theme/app_themes.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('Qalam Muslim theme presets', () {
     test('light preset produces a light Material theme', () {
       final theme = buildThemeData('light');
