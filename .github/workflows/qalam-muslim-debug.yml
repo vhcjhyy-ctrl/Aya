@@ -83,6 +83,17 @@ jobs:
           grep -q "application-icon" dist/apk-badging.txt
           test -s dist/qalam-muslim-arm64-release.apk
           "$BUILD_TOOLS/apksigner" verify --print-certs dist/qalam-muslim-arm64-release.apk | tee dist/apk-signing.txt
+          EXPECTED_SIGNER_SHA256="6a2edc757ae928665a0f27515b0329feb7ec4e5c7032020c17235de9bbe1ef42"
+          ACTUAL_SIGNER_SHA256="$(grep -i 'Signer #1 certificate SHA-256 digest:' dist/apk-signing.txt | awk '{print $NF}' | tr -d ':')"
+          if [ "$ACTUAL_SIGNER_SHA256" = "$EXPECTED_SIGNER_SHA256" ]; then
+            echo "compatible=true" | tee dist/signing-compatibility.txt
+            echo "The new APK matches the certificate of the previously delivered 1.6.0 APK."
+          else
+            echo "compatible=false" | tee dist/signing-compatibility.txt
+            echo "expected=$EXPECTED_SIGNER_SHA256" >> dist/signing-compatibility.txt
+            echo "actual=$ACTUAL_SIGNER_SHA256" >> dist/signing-compatibility.txt
+            echo "::warning::The APK signer differs from the previous 1.6.0 APK. Do not install this package as an update over the existing app."
+          fi
           unzip -l dist/qalam-muslim-arm64-release.apk | tee dist/arm64-apk-contents.txt
           grep -Eq 'lib/arm64-v8a/libapp\.so$' dist/arm64-apk-contents.txt
           grep -Eq 'lib/arm64-v8a/libflutter\.so$' dist/arm64-apk-contents.txt
@@ -98,6 +109,7 @@ jobs:
             dist/qalam-muslim-arm64-release.apk
             dist/apk-badging.txt
             dist/apk-signing.txt
+            dist/signing-compatibility.txt
             dist/arm64-apk-contents.txt
           if-no-files-found: error
           retention-days: 14
