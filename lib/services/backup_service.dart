@@ -112,12 +112,24 @@ class BackupService {
       'worship_sadaqah_checklist_v1',
       'worship_fasting_log_v1',
     ];
+    // Preserve every daily worship record, not only today's checklist.
+    final dailyKeys = storage.getPreferenceKeys()
+        .where((key) => key.startsWith('worship_daily_'))
+        .toList(growable: false);
     final appData = <String, String>{};
-    for (final key in <String>[...appDataKeys, 'worship_daily_$todayKey']) {
+    for (final key in <String>{...appDataKeys, ...dailyKeys}) {
       final value = storage.getString(key);
       if (value.isNotEmpty) appData[key] = value;
     }
 
+    // Preserve the last-read ayah for each surah, not only the global position.
+    final lastReadBySurah = <String, int>{};
+    for (var surah = 1; surah <= 114; surah++) {
+      final ayah = storage.getLastReadAyahForSurah(surah);
+      if (ayah != null && ayah > 0) {
+        lastReadBySurah['$surah'] = ayah;
+      }
+    }
     final lastRead = storage.getLastReadPosition();
     final lastAudio = storage.getLastAudioPosition();
     final lastAudioTimestamp = storage.getLastAudioTimestamp();
@@ -147,6 +159,7 @@ class BackupService {
       'custom_dhikrs_v2': customDhikrs,
       'location': storage.getLocation(),
       'last_read_position': lastRead,
+      'last_read_positions_by_surah': lastReadBySurah,
       'last_audio_position': lastAudio,
       'last_audio_timestamp_ms': lastAudioTimestamp,
       'app_data': appData,
@@ -269,6 +282,24 @@ class BackupService {
         imported++;
       }
     }
+
+    final lastReadBySurah =
+        data['last_read_positions_by_surah'] as Map? ?? {};
+    var restoredReadPositions = 0;
+    for (final entry in lastReadBySurah.entries) {
+      final surah = int.tryParse(entry.key.toString());
+      final ayah = int.tryParse(entry.value.toString());
+      if (surah == null ||
+          ayah == null ||
+          surah < 1 ||
+          surah > 114 ||
+          ayah < 1) {
+        continue;
+      }
+      await storage.saveLastReadPosition(surah, ayah);
+      restoredReadPositions++;
+    }
+    if (restoredReadPositions > 0) imported++;
 
     final lastAudio = data['last_audio_position'];
     if (lastAudio is Map) {
