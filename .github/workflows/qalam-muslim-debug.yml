@@ -56,6 +56,7 @@ jobs:
           hooks:
             user_defines:
               sqlite3:
+                source: sqlite3
                 url_pattern: "http://127.0.0.1:8765/$RELEASE_TAG/$FILENAME"
           SQLITE_HOOKS
 
