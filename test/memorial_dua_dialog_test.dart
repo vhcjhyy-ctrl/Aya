@@ -36,6 +36,8 @@ void main() {
     expect(find.textContaining('أحمد السيد السيسي'), findsOneWidget);
     expect(find.text('آمين، متابعة'), findsOneWidget);
 
+    await tester.ensureVisible(find.text('آمين، متابعة'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('آمين، متابعة'));
     await tester.pumpAndSettle();
 
