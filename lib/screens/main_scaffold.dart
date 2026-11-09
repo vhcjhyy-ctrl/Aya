@@ -10,6 +10,7 @@ import '../services/api_service.dart';
 import '../services/audio_manager.dart';
 import '../models/prayer_models.dart';
 import '../widgets/audio_player_overlay.dart';
+import '../widgets/memorial_dua_dialog.dart';
 import 'dashboard_screen.dart';
 import 'quran_screen.dart';
 import 'hadith_screen.dart';
@@ -44,6 +45,8 @@ class _MainScaffoldState extends State<MainScaffold>
   String? _hadithInitialBookId;
   DateTime? _lastPressedAt;
   StreamSubscription<String?>? _notificationSubscription;
+  bool _memorialDialogVisible = false;
+  bool _showMemorialDuaOnResume = false;
 
   @override
   void initState() {
@@ -51,6 +54,11 @@ class _MainScaffoldState extends State<MainScaffold>
     WidgetsBinding.instance.addObserver(this);
     _loadLastBookmark();
     _applyWakeLockOnLaunch();
+
+    // Show the family memorial supplication on every fresh app launch.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_showMemorialDua());
+    });
 
     _notificationSubscription = NotificationService
         .selectNotificationStream
@@ -89,6 +97,22 @@ class _MainScaffoldState extends State<MainScaffold>
 
     _rescheduleAllAlarms();
     _fetchLocationOnOpen();
+  }
+
+  Future<void> _showMemorialDua() async {
+    if (!mounted || _memorialDialogVisible) return;
+    _memorialDialogVisible = true;
+    try {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) => MemorialDuaDialog(
+          onContinue: () => Navigator.of(dialogContext).pop(),
+        ),
+      );
+    } finally {
+      _memorialDialogVisible = false;
+    }
   }
 
   Future<void> _fetchLocationOnOpen() async {
@@ -155,9 +179,17 @@ class _MainScaffoldState extends State<MainScaffold>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _showMemorialDuaOnResume = true;
+      return;
+    }
     if (state == AppLifecycleState.resumed) {
       _checkAlarmPermissionChange();
       _loadLastBookmark();
+      if (_showMemorialDuaOnResume) {
+        _showMemorialDuaOnResume = false;
+        unawaited(_showMemorialDua());
+      }
     }
   }
 

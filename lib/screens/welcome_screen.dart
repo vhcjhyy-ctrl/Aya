@@ -399,7 +399,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           Text(
             TranslationService.isArabic
                 ? "ماذا يقدم التطبيق"
-                : "What Aya Offers",
+                : "What Qalam Muslim Offers",
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,

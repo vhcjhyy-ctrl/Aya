@@ -1,5 +1,5 @@
 name: aya_app
-description: "A new Flutter project."
+description: "Qalam Muslim - Open-source Islamic companion app."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.5.0+10500
+version: 1.6.1+10601
 
 environment:
   sdk: ^3.10.1
@@ -37,6 +37,11 @@ dependencies:
     sdk: flutter
   flutter_tts: ^4.2.5
   speech_to_text: ^7.4.0
+  llama_flutter_android: ^0.2.6
+  crypto: ^3.0.7
+  archive: ^4.6.0
+  sherpa_onnx: ^2.0.1
+  record: ^6.2.1
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -54,15 +59,14 @@ dependencies:
   url_launcher: ^6.3.0
   path_provider: ^2.1.6
   android_alarm_manager_plus: ^5.0.0
-  in_app_purchase: ^3.3.0
   sqflite: ^2.4.2
   path: ^1.9.0
   html: ^0.15.6
   scroll_to_index: ^3.0.1
   dorar_hadith: ^0.5.0
   dorar_hadith_flutter: ^0.5.0
-  sqlite3_flutter_libs: ^0.6.0+eol
-  sqlite3: ^3.3.3
+  sqlite3_flutter_libs: ^0.5.42
+  sqlite3: 3.5.2
   visibility_detector: ^0.4.0+2
   share_plus: ^13.3.0
   sqflite_common_ffi: ^2.4.2
@@ -79,6 +83,13 @@ dev_dependencies:
   rename: ^3.1.0
   flutter_launcher_icons: ^0.14.4
 
+# Load the FTS5-enabled shared library shipped by sqlite3_flutter_libs.
+# Linux CI provides libsqlite3-dev through the workflow setup.
+hooks:
+  user_defines:
+    sqlite3:
+      source: system
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -92,6 +103,7 @@ flutter:
 
   assets:
     - assets/icon.png
+    - assets/data/names99.json
     - assets/audio/
     - assets/audio/adhan/
     - assets/quran/
@@ -102,6 +114,7 @@ flutter:
     - assets/fonts/
     - assets/db/
     - assets/books/
+    - assets/licenses/
 
   fonts:
     - family: Amiri

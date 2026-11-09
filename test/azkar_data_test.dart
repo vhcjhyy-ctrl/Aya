@@ -33,8 +33,15 @@ void main() {
       expect(AzkarData.salahSpecific, hasLength(8));
     });
 
-    test('life events azkar contains 9 items', () {
-      expect(AzkarData.lifeEvents, hasLength(9));
+    test('life events azkar contains 10 items', () {
+      expect(AzkarData.lifeEvents, hasLength(10));
+    });
+
+    test('life events includes the authentic supplication for the deceased', () {
+      final dua = AzkarData.lifeEvents.singleWhere((item) => item.id == 'le10');
+      expect(dua.arabic, contains('اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ'));
+      expect(dua.reference, contains('Sahih Muslim 963'));
+      expect(dua.translation, contains('Supplication for the deceased'));
     });
 
     test('protection/ruqyah contains 7 items', () {

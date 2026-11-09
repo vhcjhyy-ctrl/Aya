@@ -212,6 +212,8 @@ const List<ReciterInfo> availableReciters = [
     'Saood bin Ibraaheem Ash-Shuraym',
   ),
   ReciterInfo('ar.aymanswoaid', 'أيمن سويد', 'Ayman Sowaid'),
+  ReciterInfo('ar.minshawi', 'محمد صديق المنشاوي', 'Mohamed Siddiq Al-Minshawi'),
+  ReciterInfo('ar.shuraim', 'سعود الشريم', 'Saud Al-Shuraim'),
 ];
 
 class Surah {
