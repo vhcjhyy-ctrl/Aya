@@ -888,127 +888,42 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
                                     color: Color(0xFFE5C158),
                                   ),
                                 )
-                              else if (_quranScriptType == 'hafs')
-                                SizedBox(
-                                  width: 170,
-                                  child: DropdownButton<String>(
-                                    isExpanded: true,
-                                    value:
-                                        widget.storage.getString(
-                                          'default_reciter',
-                                          defaultValue: 'ar.alafasy',
-                                        ),
-                                    dropdownColor: theme.cardColor,
-                                    underline: const SizedBox(),
-                                    icon: const Icon(
-                                      Icons.arrow_drop_down,
-                                      color: Color(0xFFE5C158),
+                              else if (_dynamicReciters.isEmpty)
+                                Expanded(
+                                  child: Text(
+                                    TranslationService.isArabic
+                                        ? 'لا تتوفر تلاوات لهذه الرواية حاليًا'
+                                        : 'No recordings are available for this riwayah right now',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: theme.textTheme.bodyMedium?.color,
+                                      fontSize: 12,
                                     ),
-                                    items:
-                                        (List.from(availableReciters)..sort(
-                                              (a, b) =>
-                                                  TranslationService.isArabic
-                                                  ? a.nameAr.compareTo(b.nameAr)
-                                                  : a.nameEn.compareTo(
-                                                      b.nameEn,
-                                                    ),
-                                            ))
-                                            .map<DropdownMenuItem<String>>((r) {
-                                              return DropdownMenuItem(
-                                                value: r.id,
-                                                child: Text(
-                                                  TranslationService.isArabic
-                                                      ? r.nameAr
-                                                      : r.nameEn,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              );
-                                            })
-                                            .toList(),
-                                    selectedItemBuilder:
-                                        (BuildContext context) {
-                                          return (List.from(
-                                                availableReciters,
-                                              )..sort(
-                                                (a, b) =>
-                                                    TranslationService.isArabic
-                                                    ? a.nameAr.compareTo(
-                                                        b.nameAr,
-                                                      )
-                                                    : a.nameEn.compareTo(
-                                                        b.nameEn,
-                                                      ),
-                                              ))
-                                              .map((r) {
-                                                return Transform.translate(
-                                                  offset: Offset(
-                                                    TranslationService.isArabic
-                                                        ? 8
-                                                        : -8,
-                                                    0,
-                                                  ),
-                                                  child: Align(
-                                                    alignment:
-                                                        AlignmentDirectional
-                                                            .centerStart,
-                                                    child: Text(
-                                                      TranslationService
-                                                              .isArabic
-                                                          ? r.nameAr
-                                                          : r.nameEn,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                    ),
-                                                  ),
-                                                );
-                                              })
-                                              .toList();
-                                        },
-                                    onChanged: (String? val) {
-                                      if (val != null) {
-                                        AudioManager.instance.stop();
-                                        widget.storage.setString(
-                                          'default_reciter',
-                                          val,
-                                        );
-
-                                        setModalState(() {});
-                                        setState(() {});
-
-                                        // Audio stopped on reciter change
-                                      }
-                                    },
                                   ),
                                 )
                               else
                                 SizedBox(
-                                  width: 170,
+                                  width: 190,
                                   child: DropdownButton<String>(
                                     isExpanded: true,
                                     value: (() {
-                                      final current =
-                                          widget.storage.getString(
-                                            'default_reciter',
-                                          );
-                                      if (!current.startsWith(
-                                            'mp3quran_server_',
-                                          ) ||
-                                          _dynamicReciters.isEmpty)
-                                        return null;
-                                      final serverCurrent = current.substring(
-                                        16,
+                                      final current = widget.storage.getString(
+                                        'default_reciter',
+                                        defaultValue: '',
                                       );
-                                      final match = _dynamicReciters.where((r) {
-                                        final moshaf = r['moshaf'] as List;
-                                        if (moshaf.isEmpty) return false;
-                                        return (moshaf[0]['server']
-                                                as String) ==
-                                            serverCurrent;
-                                      }).toList();
-                                      return match.isNotEmpty
-                                          ? serverCurrent
-                                          : null;
+                                      final selectedServer =
+                                          current.startsWith('mp3quran_server_')
+                                              ? current.substring(16)
+                                              : '';
+                                      final servers = _dynamicReciters.map((r) {
+                                        final moshaf = (r['moshaf'] as List).first as Map;
+                                        return (moshaf['server'] ?? '').toString();
+                                      }).toSet();
+                                      return servers.contains(selectedServer)
+                                          ? selectedServer
+                                          : ((_dynamicReciters.first['moshaf'] as List)
+                                                  .first as Map)['server'] as String;
                                     })(),
                                     dropdownColor: theme.cardColor,
                                     underline: const SizedBox(),
@@ -1016,60 +931,33 @@ class _SurahReaderScreenState extends State<SurahReaderScreen>
                                       Icons.arrow_drop_down,
                                       color: Color(0xFFE5C158),
                                     ),
-                                    items: _dynamicReciters
-                                        .map((r) {
-                                          final moshaf = r['moshaf'] as List;
-                                          if (moshaf.isEmpty) return null;
-                                          final server =
-                                              moshaf[0]['server'] as String;
-                                          return DropdownMenuItem(
-                                            value: server,
-                                            child: Text(
-                                              r['name'] as String,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          );
-                                        })
-                                        .whereType<DropdownMenuItem<String>>()
-                                        .toList(),
-                                    selectedItemBuilder:
-                                        (BuildContext context) {
-                                          return _dynamicReciters.map((r) {
-                                            final moshaf = r['moshaf'] as List;
-                                            if (moshaf.isEmpty)
-                                              return const SizedBox.shrink();
-                                            return Transform.translate(
-                                              offset: Offset(
-                                                TranslationService.isArabic
-                                                    ? 8
-                                                    : -8,
-                                                0,
-                                              ),
-                                              child: Align(
-                                                alignment: AlignmentDirectional
-                                                    .centerStart,
-                                                child: Text(
-                                                  r['name'] as String,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            );
-                                          }).toList();
-                                        },
-                                    onChanged: (String? val) async {
-                                      if (val != null) {
-                                        AudioManager.instance.stop();
-                                        widget.storage.setString(
-                                          'default_reciter',
-                                          'mp3quran_server_$val',
-                                        );
-
-                                        setModalState(() {});
-                                        setState(() {});
-
-                                        // Audio stopped on reciter change
-                                      }
+                                    items: _dynamicReciters.map((r) {
+                                      final moshaf =
+                                          (r['moshaf'] as List).first as Map;
+                                      final server = (moshaf['server'] ?? '').toString();
+                                      final moshafName =
+                                          (moshaf['name'] ?? '').toString();
+                                      final label = moshafName.isEmpty
+                                          ? (r['name'] as String)
+                                          : '${r['name']} · $moshafName';
+                                      return DropdownMenuItem<String>(
+                                        value: server,
+                                        child: Text(
+                                          label,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? server) async {
+                                      if (server == null) return;
+                                      AudioManager.instance.stop();
+                                      await widget.storage.setString(
+                                        'default_reciter',
+                                        'mp3quran_server_$server',
+                                      );
+                                      setModalState(() {});
+                                      if (mounted) setState(() {});
                                     },
                                   ),
                                 ),

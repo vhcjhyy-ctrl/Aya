@@ -63,8 +63,8 @@ void main() {
   });
 
   group('ReciterInfo', () {
-    test('availableReciters has 17 entries', () {
-      expect(availableReciters, hasLength(17));
+    test('availableReciters has 19 entries', () {
+      expect(availableReciters, hasLength(19));
     });
 
     test('first reciter is Alafasy', () {

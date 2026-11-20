@@ -615,6 +615,14 @@ class AzkarData {
       count: 1,
       reference: "Al-Bukhari 5743",
     ),
+    AzkarItem(
+      id: "le10",
+      arabic: "اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ وَعَافِهِ وَاعْفُ عَنْهُ وَأَكْرِمْ نُزُلَهُ وَوَسِّعْ مُدْخَلَهُ وَاغْسِلْهُ بِالْمَاءِ وَالثَّلْجِ وَالْبَرَدِ وَنَقِّهِ مِنَ الْخَطَايَا كَمَا نَقَّيْتَ الثَّوْبَ الْأَبْيَضَ مِنَ الدَّنَسِ وَأَبْدِلْهُ دَارًا خَيْرًا مِنْ دَارِهِ وَأَهْلًا خَيْرًا مِنْ أَهْلِهِ وَزَوْجًا خَيْرًا مِنْ زَوْجِهِ وَأَدْخِلْهُ الْجَنَّةَ وَأَعِذْهُ مِنْ عَذَابِ الْقَبْرِ أَوْ مِنْ عَذَابِ النَّارِ.",
+      transliteration: "Allaahummaghfir lahu warhamhu wa 'aafihi wa'fu 'anhu, wa akrim nuzulahu wa wassi' mudkhalahu, waghsilhu bil-maa'i wath-thalji wal-barad, wa naqqihi minal-khataayaa kamaa naqqaytath-thawbal-abyadha minad-danas, wa abdilhu daaran khayran min daarihi wa ahlan khayran min ahlihi wa zawjan khayran min zawjihi, wa adkhilhul-jannata wa a'idh-hu min 'adhaabil-qabri aw min 'adhaabin-naar.",
+      translation: "O Allah, forgive him, have mercy on him, grant him well-being and pardon him. Honour his arrival, make his resting place spacious, wash him with water, snow and hail, cleanse him of sins as a white garment is cleansed of dirt, grant him a home and family better than his former home and family, admit him to Paradise, and protect him from the punishment of the grave and the Fire. (Supplication for the deceased in the funeral prayer)",
+      count: 1,
+      reference: "Sahih Muslim 963 — Supplication for the deceased in the funeral prayer",
+    ),
   ];
 
   // ========== PROTECTION / RUQYAH AZKAR ==========

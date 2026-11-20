@@ -1,15 +1,36 @@
+/// A word-order mismatch found when the recognized words are all present.
+class QuranWordOrderIssue {
+  final int position;
+  final String expectedWord;
+  final String recognizedWord;
+
+  const QuranWordOrderIssue({
+    required this.position,
+    required this.expectedWord,
+    required this.recognizedWord,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'position': position,
+        'expected': expectedWord,
+        'recognized': recognizedWord,
+      };
+}
+
 /// Text matching only; this does not assess tajweed or articulation.
 class QuranRecitationComparison {
   final int matchedWords;
   final int expectedWords;
   final List<String> missingWords;
   final List<String> extraWords;
+  final List<QuranWordOrderIssue> outOfOrderWords;
 
   const QuranRecitationComparison({
     required this.matchedWords,
     required this.expectedWords,
     required this.missingWords,
     required this.extraWords,
+    this.outOfOrderWords = const [],
   });
 
   int get similarityPercent =>
@@ -53,6 +74,36 @@ class QuranRecitationMatcher {
       }
     }
 
+    final expectedCounts = <String, int>{};
+    final recognizedCounts = <String, int>{};
+    for (final word in a) {
+      expectedCounts.update(word, (count) => count + 1, ifAbsent: () => 1);
+    }
+    for (final word in b) {
+      recognizedCounts.update(word, (count) => count + 1, ifAbsent: () => 1);
+    }
+    final sameWordsInDifferentOrder = n == m &&
+        expectedCounts.length == recognizedCounts.length &&
+        expectedCounts.entries.every(
+          (entry) => recognizedCounts[entry.key] == entry.value,
+        ) &&
+        a.asMap().entries.any((entry) => entry.value != b[entry.key]);
+
+    final outOfOrder = <QuranWordOrderIssue>[];
+    if (sameWordsInDifferentOrder) {
+      for (var index = 0; index < n; index++) {
+        if (a[index] != b[index]) {
+          outOfOrder.add(
+            QuranWordOrderIssue(
+              position: index + 1,
+              expectedWord: a[index],
+              recognizedWord: b[index],
+            ),
+          );
+        }
+      }
+    }
+
     final missing = <String>[];
     final extra = <String>[];
     var i = 0;
@@ -74,11 +125,17 @@ class QuranRecitationMatcher {
       extra.add(b[j++]);
     }
 
+    if (sameWordsInDifferentOrder) {
+      missing.clear();
+      extra.clear();
+    }
+
     return QuranRecitationComparison(
       matchedWords: dp[0][0],
       expectedWords: n,
       missingWords: missing,
       extraWords: extra,
+      outOfOrderWords: outOfOrder,
     );
   }
 }

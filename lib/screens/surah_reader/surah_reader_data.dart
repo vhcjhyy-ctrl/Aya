@@ -5,16 +5,8 @@ extension SurahReaderData on _SurahReaderScreenState {
     String scriptType, {
     StateSetter? modalSetState,
   }) async {
-    if (scriptType == 'hafs') {
-      if (mounted)
-        setState(() {
-          _dynamicReciters = [];
-        });
-      if (modalSetState != null) modalSetState(() {});
-      return;
-    }
-
-    // Map script type to mp3quran riwayah id
+    // MP3Quran API v3 provides real recitation servers for every riwayah,
+    // including Hafs. Do not use fabricated/static edition IDs here.
     int riwayahId = 1;
     switch (scriptType) {
       case 'warsh':
@@ -57,25 +49,46 @@ extension SurahReaderData on _SurahReaderScreenState {
 
       if (mounted) {
         setState(() {
-          _dynamicReciters = filteredReciters;
-          _dynamicReciters.sort(
-            (a, b) => (a['name'] as String).compareTo(b['name'] as String),
-          );
+          // Flatten every available moshaf into its own selectable source.
+          // One reciter may have both murattal and mujawwad recordings.
+          _dynamicReciters = filteredReciters.expand((reciter) {
+            final moshafs = reciter['moshaf'] as List? ?? const [];
+            return moshafs.whereType<Map>().where((moshaf) {
+              final server = (moshaf['server'] ?? '').toString();
+              return server.startsWith('https://');
+            }).map((moshaf) => <String, dynamic>{
+              'name': reciter['name']?.toString() ?? '',
+              'moshaf': [Map<String, dynamic>.from(moshaf)],
+            });
+          }).toList()
+            ..sort((a, b) {
+              final nameCompare = (a['name'] as String).compareTo(
+                b['name'] as String,
+              );
+              if (nameCompare != 0) return nameCompare;
+              final aMoshaf = (a['moshaf'] as List).first as Map;
+              final bMoshaf = (b['moshaf'] as List).first as Map;
+              return (aMoshaf['name'] ?? '').toString().compareTo(
+                (bMoshaf['name'] ?? '').toString(),
+              );
+            });
           _isLoadingReciters = false;
 
-          // Set first dynamic reciter as default if none selected or if current is invalid
-          final currentReciter =
-              widget.storage.getString('default_reciter');
-          if (!currentReciter.startsWith('mp3quran_server_') &&
-              _dynamicReciters.isNotEmpty) {
-            final moshaf = _dynamicReciters[0]['moshaf'] as List;
-            if (moshaf.isNotEmpty) {
-              final server = moshaf[0]['server'] as String;
-              widget.storage.setString(
-                'default_reciter',
-                'mp3quran_server_$server',
-              );
-            }
+          // Keep the saved choice only when its actual server exists in
+          // the newly selected riwayah; otherwise select a real available source.
+          final currentReciter = widget.storage.getString('default_reciter');
+          final currentServer = currentReciter.startsWith('mp3quran_server_')
+              ? currentReciter.substring(16)
+              : '';
+          final availableServers = _dynamicReciters.map((reciter) {
+            final moshaf = (reciter['moshaf'] as List).first as Map;
+            return (moshaf['server'] ?? '').toString();
+          }).toSet();
+          if (_dynamicReciters.isNotEmpty &&
+              !availableServers.contains(currentServer)) {
+            final firstMoshaf = (_dynamicReciters.first['moshaf'] as List).first as Map;
+            final server = (firstMoshaf['server'] ?? '').toString();
+            widget.storage.setString('default_reciter', 'mp3quran_server_$server');
           }
         });
         if (modalSetState != null) modalSetState(() {});

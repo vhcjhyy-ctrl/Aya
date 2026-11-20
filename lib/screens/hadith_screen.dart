@@ -53,6 +53,11 @@ class _HadithScreenState extends State<HadithScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _debounce;
 
+  void _updateHadithState(VoidCallback update) {
+    if (!mounted) return;
+    setState(update);
+  }
+
   void _scrollToTop() {
     Future.delayed(const Duration(milliseconds: 200), () {
       if (_scrollController.hasClients) _scrollController.jumpTo(0.0);

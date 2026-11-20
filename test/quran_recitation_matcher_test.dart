@@ -24,6 +24,27 @@ void main() {
       expect(result.similarityPercent, 75);
     });
 
+    test('identifies word-order changes separately from missing words', () {
+      final result = QuranRecitationMatcher.compare(
+        expected: 'الحمد لله رب العالمين',
+        recognized: 'الحمد رب لله العالمين',
+      );
+      expect(result.missingWords, isEmpty);
+      expect(result.extraWords, isEmpty);
+      expect(result.outOfOrderWords, hasLength(2));
+      expect(result.outOfOrderWords.first.position, 2);
+      expect(result.outOfOrderWords.first.expectedWord, 'لله');
+      expect(result.outOfOrderWords.first.recognizedWord, 'رب');
+    });
+
+    test('does not report word-order issues for repeated correct wording', () {
+      final result = QuranRecitationMatcher.compare(
+        expected: 'قل هو الله أحد',
+        recognized: 'قل هو الله احد',
+      );
+      expect(result.outOfOrderWords, isEmpty);
+    });
+
     test('handles empty recognition', () {
       final result = QuranRecitationMatcher.compare(
         expected: 'قل هو الله احد',

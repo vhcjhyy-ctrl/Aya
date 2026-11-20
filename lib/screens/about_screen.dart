@@ -6,6 +6,16 @@ import '../version.dart';
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
 
+  static final Uri _sourceUri = Uri.parse(
+    'https://github.com/vhcjhyy-ctrl/Aya/tree/qalam-muslim-enhancements',
+  );
+
+  Future<void> _openSource() async {
+    if (await canLaunchUrl(_sourceUri)) {
+      await launchUrl(_sourceUri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -15,7 +25,7 @@ class AboutScreen extends StatelessWidget {
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          isArabic ? "حول قلم مسلم" : "About Qalam Muslim",
+          isArabic ? 'حول قلم مسلم' : 'About Qalam Muslim',
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: theme.appBarTheme.backgroundColor,
@@ -37,7 +47,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              isArabic ? "قلم مسلم" : "Qalam Muslim",
+              isArabic ? 'قلم مسلم' : 'Qalam Muslim',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -46,7 +56,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              isArabic ? "الإصدار $appVersion" : "Version $appVersion",
+              isArabic ? 'الإصدار $appVersion' : 'Version $appVersion',
               style: TextStyle(
                 fontSize: 16,
                 color: theme.textTheme.bodyMedium?.color,
@@ -62,8 +72,8 @@ class AboutScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Text(
                   isArabic
-                      ? "تم تطوير هذا التطبيق كصدقة جارية، ليرافقك في رحلتك الإيمانية مع القرآن الكريم والأحاديث النبوية والأذكار اليومية ومواقيت الصلاة."
-                      : "This application is developed as a continuous charity (Sadaqah Jariyah), to accompany you on your spiritual journey with the Holy Quran, prophetic hadith, daily supplications, and prayer times.",
+                      ? 'يجمع قلم مسلم أدوات إسلامية تساعدك في قراءة القرآن الكريم، ومتابعة الأذكار والحديث ومواقيت الصلاة، مع مزايا تعمل دون اتصال بالإنترنت.'
+                      : 'Qalam Muslim brings together tools for Quran reading, Hadith, daily remembrance, prayer times, and other Islamic resources, with core features available offline.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 16,
@@ -74,130 +84,94 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 24),
-            _sectionHeader(theme, isArabic ? "الميزات" : "Features"),
+            _sectionHeader(theme, isArabic ? 'الميزات' : 'Features'),
             const SizedBox(height: 12),
             _featureCard(
               theme,
               Icons.wifi_off,
               isArabic
-                  ? "يعمل بالكامل بدون إنترنت — قرآن، حديث، أذكار، مواقيت، أذان"
-                  : "100% Offline-First — Quran, Hadith, Azkar, Prayer Times, Adhan",
+                  ? 'قرآن وحديث وأذكار ومواقيت صلاة مع دعم الاستخدام دون إنترنت'
+                  : 'Quran, Hadith, Azkar, and prayer times with offline support',
             ),
             _featureCard(
               theme,
               Icons.menu_book,
               isArabic
-                  ? "١٠ قراءات قرآنية مع تلاوات من ١٧+ قارئاً"
-                  : "10 Qira'at with recitations from 17+ reciters",
+                  ? 'قراءات قرآنية متعددة وتلاوات متزامنة مع الآيات'
+                  : 'Multiple Quranic readings and verse-synchronized recitations',
             ),
             _featureCard(
               theme,
               Icons.library_books,
               isArabic
-                  ? "١٣ كتاب حديث مع التخريج والشرح"
-                  : "13 Hadith books with grading and explanation",
+                  ? 'مكتبة حديث مع البحث والتخريج والشرح'
+                  : 'Hadith library with search, grading, and explanations',
             ),
             _featureCard(
               theme,
               Icons.access_alarm,
               isArabic
-                  ? "أذان دقيق مع تنبيه قبل الأذان وتذكيرات ذكية"
-                  : "Precise Adhan with pre-alerts, smart reminders, and gesture control",
+                  ? 'مواقيت الصلاة والأذان والتنبيهات'
+                  : 'Prayer times, Adhan, and reminders',
             ),
             _featureCard(
               theme,
               Icons.widgets,
               isArabic
-                  ? "٨ أدوات للشاشة الرئيسية — مواقيت، آية اليوم، ذكر، وغيرها"
-                  : "8 Home Screen Widgets — Prayer Times, Verse of the Day, Dhikr, and more",
+                  ? 'أدوات للشاشة الرئيسية للآيات والأذكار ومواقيت الصلاة'
+                  : 'Home-screen widgets for verses, remembrance, and prayer times',
             ),
-
             const SizedBox(height: 32),
-            _sectionHeader(theme, isArabic ? "المطور" : "Developer"),
+            _sectionHeader(theme, isArabic ? 'مشروع مفتوح المصدر' : 'Open-source project'),
             const SizedBox(height: 12),
             Card(
               color: theme.cardColor,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFFE5C158).withValues(alpha: 0.18),
-                        child: const Icon(Icons.engineering, color: Color(0xFFE5C158)),
-                      ),
-                      title: const Text(
-                        "المهندس أحمد محمد الزبلاوي",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        isArabic
-                            ? "تطوير وإضافات نسخة قلم مسلم"
-                            : "Development and enhancements for Qalam Muslim",
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(18, 18, 18, 8),
+                    child: Text(
+                      isArabic
+                          ? 'الشيفرة المصدرية متاحة للعامة. يتضمن المستودع ملف الترخيص وإشعارات حقوق المكونات مفتوحة المصدر المستخدمة في المشروع.'
+                          : 'The source code is publicly available. The repository includes the applicable license and notices for open-source components used by the project.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        height: 1.6,
+                        color: theme.textTheme.bodyLarge?.color,
                       ),
                     ),
-                    const Divider(),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: theme.primaryColor.withValues(alpha: 0.2),
-                        child: Icon(Icons.person, color: theme.primaryColor),
-                      ),
-                      title: const Text(
-                        "Abdalrahman Samir",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        isArabic
-                            ? "المطور الأصلي لتطبيق آية — صُنع بكل حب لخدمة الإسلام"
-                            : "Original developer of Aya — made with love to serve Islam",
-                      ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.code, color: Color(0xFFE5C158)),
+                    title: Text(
+                      isArabic ? 'عرض الشيفرة المصدرية' : 'View source code',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    const Divider(),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFFE5C158).withValues(alpha: 0.15),
-                        child: const Icon(Icons.auto_awesome, color: Color(0xFFE5C158), size: 20),
-                      ),
-                      title: Text(
-                        isArabic
-                            ? "شكر خاص لـ AYA"
-                            : "Special Thanks to AYA",
-                        style: const TextStyle(fontWeight: FontWeight.w600),
-                      ),
+                    subtitle: const Text('github.com/vhcjhyy-ctrl/Aya'),
+                    trailing: const Icon(Icons.open_in_new),
+                    onTap: _openSource,
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.description_outlined, color: Color(0xFFE5C158)),
+                    title: Text(
+                      isArabic ? 'الترخيص' : 'License',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    const Divider(),
-                    ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-                        child: const Icon(Icons.code, color: Color(0xFFE5C158), size: 20),
-                      ),
-                      title: const Text(
-                        "github.com/Cancelllls/Aya",
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                      subtitle: Text(
-                        isArabic ? "المستودع مفتوح المصدر" : "Open-source repository",
-                      ),
-                      onTap: () async {
-                        final url = Uri.parse('https://github.com/Cancelllls/Aya');
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(url, mode: LaunchMode.externalApplication);
-                        }
-                      },
+                    subtitle: Text(
+                      isArabic
+                          ? 'MIT مع الاحتفاظ بإشعارات حقوق المكونات وتراخيصها'
+                          : 'MIT, with third-party copyright and license notices retained',
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-
             const SizedBox(height: 40),
             Text(
-              isArabic
-                  ? "جميع الحقوق محفوظة © ٢٠٢٦"
-                  : "All rights reserved © 2026",
+              isArabic ? 'مشروع مفتوح المصدر • ٢٠٢٦' : 'Open-source project • 2026',
               style: TextStyle(
                 color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                 fontSize: 13,
@@ -205,7 +179,7 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+              'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
               style: TextStyle(
                 fontFamily: 'Amiri',
                 fontSize: 18,
@@ -260,5 +234,4 @@ class AboutScreen extends StatelessWidget {
       ),
     );
   }
-
 }

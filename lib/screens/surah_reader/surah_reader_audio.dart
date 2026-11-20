@@ -13,7 +13,13 @@ extension SurahReaderAudio on _SurahReaderScreenState {
   }
 
   void _playAudioWithDisclaimer({int? ayahIndex}) {
-    final supportsAyahSync = _quranScriptType == 'hafs';
+    final selectedReciter = widget.storage.getString(
+      'default_reciter',
+      defaultValue: 'ar.alafasy',
+    );
+    // MP3Quran moshaf links are full-surah files, not verse-by-verse streams.
+    final supportsAyahSync = _quranScriptType == 'hafs' &&
+        !selectedReciter.startsWith('mp3quran_server_');
     final hideDisclaimer = widget.storage.getBool(
       'hide_full_surah_disclaimer',
       defaultValue: false,

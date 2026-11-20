@@ -34,30 +34,30 @@ ThemeData _buildM3LightTheme({ColorScheme? dynamicScheme}) {
       (dynamicScheme != null && dynamicScheme.brightness == Brightness.light)
           ? dynamicScheme.harmonized()
           : ColorScheme.fromSeed(
-              seedColor: const Color(0xFF2E695F),
+              seedColor: const Color(0xFF2F6658),
               brightness: Brightness.light,
-              primary: AppColors.teal,
+              primary: const Color(0xFF2F6658),
               onPrimary: Colors.white,
-              secondary: const Color(0xFFB45309), // Amber accent
+              secondary: const Color(0xFF9A7957),
               onSecondary: Colors.white,
-              surface: const Color(0xFFFFFEFA),
-              onSurface: const Color(0xFF293A34),
-              surfaceContainerLowest: const Color(0xFFF6F5EF),
-              surfaceContainerHigh: const Color(0xFFFFFEFA),
-              surfaceContainerHighest: const Color(0xFFECEEE7),
-              outline: const Color(0xFFD0D9D1),
-              outlineVariant: const Color(0xFFE2E7E0),
+              surface: const Color(0xFFFFFEFB),
+              onSurface: const Color(0xFF26352F),
+              surfaceContainerLowest: const Color(0xFFF4F6F1),
+              surfaceContainerHigh: const Color(0xFFFFFEFB),
+              surfaceContainerHighest: const Color(0xFFE9EEE8),
+              outline: const Color(0xFFC8D4CC),
+              outlineVariant: const Color(0xFFDCE5DE),
             );
 
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     colorScheme: colorScheme,
-    scaffoldBackgroundColor: const Color(0xFFF6F5EF),
+    scaffoldBackgroundColor: const Color(0xFFF4F6F1),
     primaryColor: colorScheme.primary,
     cardColor: Colors.white,
     canvasColor: Colors.white,
-    dividerColor: const Color(0xFFE2E8F0),
+    dividerColor: const Color(0xFFDCE5DE),
 
     // M3 Typography
     textTheme: const TextTheme(
@@ -192,16 +192,17 @@ ThemeData _buildM3DarkTheme({ColorScheme? dynamicScheme}) {
   final colorScheme = (dynamicScheme != null)
       ? dynamicScheme.harmonized()
       : ColorScheme.fromSeed(
-          seedColor: const Color(0xFF254C44),
+          seedColor: const Color(0xFF183B33),
           brightness: Brightness.dark,
-          primary: AppColors.gold,
-          onPrimary: Colors.black,
-          secondary: AppColors.green,
-          onSecondary: Colors.white,
+          primary: const Color(0xFFA8C6B5),
+          onPrimary: const Color(0xFF14231D),
+          secondary: const Color(0xFFC5AD86),
+          onSecondary: const Color(0xFF292116),
           surface: const Color(0xFF17231F),
-          onSurface: const Color(0xFFF0F2EC),
-          surfaceContainerHighest: const Color(0xFF26342F),
-          outline: const Color(0xFF43544C),
+          onSurface: const Color(0xFFEAF0EB),
+          surfaceContainerLowest: const Color(0xFF101A17),
+          surfaceContainerHighest: const Color(0xFF24342D),
+          outline: const Color(0xFF42584D),
         );
 
   return ThemeData(

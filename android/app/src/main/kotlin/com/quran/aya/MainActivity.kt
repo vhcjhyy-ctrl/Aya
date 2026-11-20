@@ -88,6 +88,7 @@ class MainActivity : FlutterActivity() {
                             mp3ResName = call.argument<String>("mp3ResName") ?: "",
                             prayerName = call.argument<String>("prayerName") ?: "Prayer",
                             enableVibration = call.argument<Boolean>("enableVibration") ?: true,
+                            forceSound = call.argument<Boolean>("forceSound") ?: false,
                         )
                         result.success(true)
                     } else {
@@ -250,6 +251,7 @@ class MainActivity : FlutterActivity() {
         mp3ResName: String,
         prayerName: String,
         enableVibration: Boolean,
+        forceSound: Boolean,
     ) {
         val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(this, AdhanBroadcastReceiver::class.java).apply {
@@ -257,6 +259,7 @@ class MainActivity : FlutterActivity() {
             putExtra("MP3_RES_NAME", mp3ResName)
             putExtra("PRAYER_NAME", prayerName)
             putExtra("ENABLE_VIBRATION", enableVibration)
+            putExtra("FORCE_SOUND", forceSound)
             putExtra("SCHEDULED_TIMESTAMP", timestamp)
         }
         val pendingIntent = PendingIntent.getBroadcast(

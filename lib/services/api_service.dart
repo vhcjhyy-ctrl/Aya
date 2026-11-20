@@ -692,6 +692,22 @@ class ApiService {
   }
 
   // ─── Audio URLs ────────────────────────────────────────────────────────
+  // Keep legacy preference IDs compatible with the edition IDs exposed by
+  // AlQuran Cloud. Unknown IDs are passed through unchanged.
+  static String _canonicalAudioEdition(String reciter) {
+    const aliases = <String, String>{
+      'ar.abdurrahmaansudais': 'ar.sudais',
+      'ar.abdulsamad': 'ar.abdulbasit',
+      'ar.shaatree': 'ar.shatri',
+      'ar.hanirifai': 'ar.rifai',
+      'ar.muhammadayyoub': 'ar.muhammadayoub',
+      'ar.saoodshuraym': 'ar.shuraim',
+      'ar.ahmedajamy': 'ar.ajamy',
+      'ar.saadalghamidi': 'ar.saadalghamdi',
+    };
+    return aliases[reciter] ?? reciter;
+  }
+
   static String buildAyahAudioUrl(
     int globalAyahNumber,
     int surahNumber,
@@ -702,7 +718,8 @@ class ApiService {
     if (reciter.startsWith('mp3quran_server_')) {
       return ''; // Not supported
     }
-    return 'https://cdn.islamic.network/quran/audio/128/$reciter/$globalAyahNumber.mp3';
+    final edition = _canonicalAudioEdition(reciter);
+    return 'https://cdn.islamic.network/quran/audio/128/$edition/$globalAyahNumber.mp3';
   }
 
   static String buildSurahAudioUrl(
@@ -716,7 +733,8 @@ class ApiService {
           ? '$server$formattedNumber.mp3'
           : '$server/$formattedNumber.mp3';
     }
-    return 'https://cdn.islamic.network/quran/audio/128/$reciter/$surahNumber.mp3';
+    final edition = _canonicalAudioEdition(reciter);
+    return 'https://cdn.islamic.network/quran/audio-surah/128/$edition/$surahNumber.mp3';
   }
 
   static String buildSurahAudioUrlForQiraat(

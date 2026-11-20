@@ -21,6 +21,10 @@ import 'sirah_screen.dart';
 import 'fiqh/fiqh_screen.dart';
 import 'assistant_screen.dart';
 import 'sheikh_ahmed_screen.dart';
+import 'wird_qadaa_screen.dart';
+import 'asma_ul_husna_screen.dart';
+import 'tajweed_guide_screen.dart';
+import 'qiraat_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final StorageService storage;
@@ -919,6 +923,37 @@ class _DashboardScreenState extends State<DashboardScreen>
                     ),
                     GridServiceCard(
                       theme: theme,
+                      icon: Icons.spellcheck_rounded,
+                      title: TranslationService.isArabic
+                          ? 'دليل أحكام التجويد'
+                          : 'Tajweed Rules Guide',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                TajweedGuideScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.graphic_eq_rounded,
+                      title: TranslationService.isArabic
+                          ? 'القراءات والروايات'
+                          : 'Qira’at & Riwayat',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const QiraatScreen(),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
                       icon: Icons.access_time_filled,
                       title: TranslationService.t('prayer'),
                       onTap: () => widget.onTabChange(2, subTab: 0),
@@ -971,6 +1006,56 @@ class _DashboardScreenState extends State<DashboardScreen>
                       icon: Icons.calendar_month,
                       title: TranslationService.t('hijri_calendar'),
                       onTap: () => widget.onTabChange(2, subTab: 2),
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.auto_stories_rounded,
+                      title: TranslationService.isArabic
+                          ? 'خطة ختمة القرآن'
+                          : 'Quran Khatmah',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                WirdQadaaScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.checklist_rtl_rounded,
+                      title: TranslationService.isArabic
+                          ? 'قضاء الصلاة والصيام'
+                          : 'Qadaa Tracker',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => WirdQadaaScreen(
+                              storage: widget.storage,
+                              initialTab: 1,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.auto_awesome_rounded,
+                      title: TranslationService.isArabic
+                          ? 'أسماء الله الحسنى'
+                          : '99 Names of Allah',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                AsmaUlHusnaScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
                     ),
                     GridServiceCard(
                       theme: theme,
