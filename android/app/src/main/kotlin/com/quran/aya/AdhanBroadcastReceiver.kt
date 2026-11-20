@@ -34,6 +34,7 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
         val enableVibration = intent.getBooleanExtra("ENABLE_VIBRATION", true)
         val scheduledTimestamp = intent.getLongExtra("SCHEDULED_TIMESTAMP", 0L)
         val maxDurationMs = intent.getIntExtra("MAX_DURATION_MS", 0)
+        val forceSound = intent.getBooleanExtra("FORCE_SOUND", false)
 
         val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
         val notifLang = prefs.getString("flutter.notification_lang", "follow_app") ?: "follow_app"
@@ -68,13 +69,18 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
         val storedPrayerMode = prefs.getString("flutter.adhan_mode_$pKey", null)
             ?: prefs.getString("flutter.adhan_alert_mode", null)
 
-        val isSoundWanted = when (storedPrayerMode) {
-            "vibrate", "silent", "off" -> false
-            else -> mp3ResName.isNotEmpty() &&
-                mp3ResName != "none" &&
-                mp3ResName != "silent" &&
-                mp3ResName != "vibrate" &&
-                mp3ResName != "off"
+        val hasAdhanResource = mp3ResName.isNotEmpty() &&
+            mp3ResName != "none" &&
+            mp3ResName != "silent" &&
+            mp3ResName != "vibrate" &&
+            mp3ResName != "off"
+        val isSoundWanted = if (forceSound) {
+            hasAdhanResource
+        } else {
+            when (storedPrayerMode) {
+                "vibrate", "silent", "off" -> false
+                else -> hasAdhanResource
+            }
         }
 
         val isVibrationWanted = when (storedPrayerMode) {
@@ -309,7 +315,12 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
         }
 
         if (resId == 0) {
+            try {
+                sensorManager?.unregisterListener(this)
+            } catch (_: Exception) {}
+            notifManager.cancel(alarmId)
             if (wakeLock.isHeld) wakeLock.release()
+            Log.e("AdhanBroadcastReceiver", "No bundled Adhan resource found for: $mappedResName")
             triggerPostAdhanActions()
             return
         }
@@ -403,9 +414,7 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
             Log.i("AdhanBroadcastReceiver", "Prepared Adhan audio resource: $mappedResName")
         } catch (e: Exception) {
             Log.e("AdhanBroadcastReceiver", "Error creating MediaPlayer: ${e.message}", e)
-            AdhanPlaybackKeepAliveService.stop(context)
-            if (wakeLock.isHeld) wakeLock.release()
-            triggerPostAdhanActions()
+            stop()
             return
         }
 

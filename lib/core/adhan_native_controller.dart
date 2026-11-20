@@ -12,6 +12,7 @@ class AdhanNativeController {
     required String mp3ResName,
     required String prayerName,
     bool enableVibration = true,
+    bool forceSound = false,
   }) async {
     try {
       await _channel.invokeMethod('scheduleExactAlarm', {
@@ -20,6 +21,7 @@ class AdhanNativeController {
         'mp3ResName': mp3ResName,
         'prayerName': prayerName,
         'enableVibration': enableVibration,
+        'forceSound': forceSound,
       });
     } on PlatformException catch (e) {
       print("Failed to schedule native alarm: '${e.message}'.");

@@ -904,6 +904,7 @@ class _AdhanSettingsScreenState extends State<AdhanSettingsScreen> {
                         time: testTime,
                         mp3ResName: rawName,
                         prayerName: isAr ? 'الظهر' : 'Dhuhr',
+                        forceSound: true,
                       );
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
