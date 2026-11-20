@@ -12,7 +12,6 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.media.AudioAttributes
-import android.media.AudioManager
 import android.media.MediaPlayer
 import android.os.Build
 import android.os.PowerManager
@@ -288,19 +287,20 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
         } catch (_: Exception) {}
 
         // ── MediaPlayer Reciter Selection ─────────────────────────────
+        // Resolve Fajr-specific recordings before matching generic reciter names.
         val mappedResName = when {
-            mp3ResName.contains("meshary") || mp3ResName == "mishary" -> "adhan_meshary_al_fasy_kuwait"
-            mp3ResName.contains("abdelbasset") || mp3ResName == "abdul_basit" -> "adhan_abdelbasset_abdessamad_egypte"
-            mp3ResName.contains("zahrani") || mp3ResName == "manssour" -> "adhan_manssour_el_zahrani"
-            mp3ResName.contains("quds") || mp3ResName == "maghriby" -> "adhan_nurdin_hamza_al_maghriby_quds"
-            mp3ResName.contains("kazabri") -> "adhan_omar_al_kazabri_morocco"
-            mp3ResName.contains("riad") -> "adhan_riad_al_djazairi_algeria"
-            mp3ResName.contains("nakshabandi") -> "adhan_sayed_al_nakshabandi_egypte"
-            mp3ResName.contains("fajr_meshary") -> "adhan_fajr_meshary_al_fasy_kuwait"
-            mp3ResName.contains("fajr_abdelbasset") -> "adhan_fajr_abdelbasset_abdessamad_egypte"
-            mp3ResName.contains("fajr_al_haram") || mp3ResName == "madinah" -> "adhan_fajr_al_haram_el_madani_saoudia"
-            mp3ResName.contains("haddiwi") || mp3ResName == "nurdin" -> "adhan_fajr_nurdin_al_haddiwi_fajr_morocco"
-            else -> mp3ResName.replace(".mp3", "")
+            mp3ResName.contains("fajr_meshary", ignoreCase = true) -> "adhan_fajr_meshary_al_fasy_kuwait"
+            mp3ResName.contains("fajr_abdelbasset", ignoreCase = true) -> "adhan_fajr_abdelbasset_abdessamad_egypte"
+            mp3ResName.contains("fajr_al_haram", ignoreCase = true) || mp3ResName == "madinah" -> "adhan_fajr_al_haram_el_madani_saoudia"
+            mp3ResName.contains("haddiwi", ignoreCase = true) || mp3ResName == "nurdin" -> "adhan_fajr_nurdin_al_haddiwi_fajr_morocco"
+            mp3ResName.contains("meshary", ignoreCase = true) || mp3ResName == "mishary" -> "adhan_meshary_al_fasy_kuwait"
+            mp3ResName.contains("abdelbasset", ignoreCase = true) || mp3ResName == "abdul_basit" -> "adhan_abdelbasset_abdessamad_egypte"
+            mp3ResName.contains("zahrani", ignoreCase = true) || mp3ResName == "manssour" -> "adhan_manssour_el_zahrani"
+            mp3ResName.contains("quds", ignoreCase = true) || mp3ResName == "maghriby" -> "adhan_nurdin_hamza_al_maghriby_quds"
+            mp3ResName.contains("kazabri", ignoreCase = true) -> "adhan_omar_al_kazabri_morocco"
+            mp3ResName.contains("riad", ignoreCase = true) -> "adhan_riad_al_djazairi_algeria"
+            mp3ResName.contains("nakshabandi", ignoreCase = true) -> "adhan_sayed_al_nakshabandi_egypte"
+            else -> mp3ResName.substringAfterLast('/').removeSuffix(".mp3")
         }
 
         var resId = context.resources.getIdentifier(mappedResName, "raw", context.packageName)
@@ -316,8 +316,23 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
 
         var player: MediaPlayer? = null
         var mediaSession: MediaSessionCompat? = null
+        var stopped = false
+
+        // Keep the Android process alive while this exact-alarm receiver plays the Adhan.
+        // Media playback must be backed by a foreground service on modern Android versions.
+        try {
+            val serviceIntent = Intent(context, AdhanPlaybackKeepAliveService::class.java).apply {
+                putExtra("ALARM_ID", alarmId)
+                putExtra("PRAYER_NAME", prayerName)
+            }
+            context.startForegroundService(serviceIntent)
+        } catch (e: Exception) {
+            Log.e("AdhanBroadcastReceiver", "Could not start foreground playback service", e)
+        }
 
         fun stop() {
+            if (stopped) return
+            stopped = true
             try {
                 sensorManager?.unregisterListener(this)
             } catch (_: Exception) {}
@@ -337,6 +352,8 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
             } catch (_: Exception) {}
 
             notifManager.cancel(alarmId)
+            AdhanPlaybackKeepAliveService.stop(context)
+            Companion.activeStop = null
             if (wakeLock.isHeld) wakeLock.release()
             triggerPostAdhanActions()
         }
@@ -360,25 +377,35 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
 
         // ── MediaPlayer ─────────────────────────────────────────────
         try {
-            val mp = MediaPlayer().apply {
-                setAudioAttributes(
-                    AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_ALARM)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                        .setLegacyStreamType(AudioManager.STREAM_ALARM)
-                        .build()
-                )
-                val afd = context.resources.openRawResourceFd(resId)
-                if (afd != null) {
-                    setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
-                    afd.close()
-                    prepare()
+            val audioAttributes = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                .build()
+
+            // openRawResourceFd can be unavailable for compressed resources. In that
+            // case MediaPlayer.create performs the resource setup through Android.
+            val afd = context.resources.openRawResourceFd(resId)
+            val mp = if (afd == null) {
+                MediaPlayer.create(context, resId, audioAttributes, 0)
+            } else {
+                MediaPlayer().apply {
+                    setAudioAttributes(audioAttributes)
+                    try {
+                        setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)
+                        prepare()
+                    } finally {
+                        afd.close()
+                    }
                 }
-            }
+            } ?: throw IllegalStateException("Android could not open the selected Adhan resource")
+
             player = mp
+            Log.i("AdhanBroadcastReceiver", "Prepared Adhan audio resource: $mappedResName")
         } catch (e: Exception) {
             Log.e("AdhanBroadcastReceiver", "Error creating MediaPlayer: ${e.message}", e)
+            AdhanPlaybackKeepAliveService.stop(context)
             if (wakeLock.isHeld) wakeLock.release()
+            triggerPostAdhanActions()
             return
         }
 
@@ -419,7 +446,13 @@ class AdhanBroadcastReceiver : BroadcastReceiver(), SensorEventListener {
             }, maxDurationMs.toLong())
         }
 
-        player?.start()
+        try {
+            player?.start() ?: throw IllegalStateException("Adhan player was not initialized")
+            Log.i("AdhanBroadcastReceiver", "Adhan playback started for $prayerName")
+        } catch (e: Exception) {
+            Log.e("AdhanBroadcastReceiver", "Could not start Adhan playback", e)
+            stop()
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent?) {

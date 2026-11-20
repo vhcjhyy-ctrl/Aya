@@ -23,6 +23,8 @@ import 'assistant_screen.dart';
 import 'sheikh_ahmed_screen.dart';
 import 'wird_qadaa_screen.dart';
 import 'asma_ul_husna_screen.dart';
+import 'tajweed_guide_screen.dart';
+import 'qiraat_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final StorageService storage;
@@ -918,6 +920,37 @@ class _DashboardScreenState extends State<DashboardScreen>
                       icon: Icons.menu_book,
                       title: TranslationService.t('quran'),
                       onTap: () => widget.onTabChange(1),
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.spellcheck_rounded,
+                      title: TranslationService.isArabic
+                          ? 'دليل أحكام التجويد'
+                          : 'Tajweed Rules Guide',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                TajweedGuideScreen(storage: widget.storage),
+                          ),
+                        );
+                      },
+                    ),
+                    GridServiceCard(
+                      theme: theme,
+                      icon: Icons.graphic_eq_rounded,
+                      title: TranslationService.isArabic
+                          ? 'القراءات والروايات'
+                          : 'Qira’at & Riwayat',
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const QiraatScreen(),
+                          ),
+                        );
+                      },
                     ),
                     GridServiceCard(
                       theme: theme,

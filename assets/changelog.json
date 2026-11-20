@@ -1,6 +1,23 @@
 {
   "versions": [
     {
+      "version": "1.6.2",
+      "date": "2026-11-20",
+      "title": "Reliable Adhan Playback & New Quran Learning Sections",
+      "changes": {
+        "en": [
+          "Reliable Adhan Playback — Keep native alarm audio in a media-playback foreground service and handle unavailable raw-resource file descriptors safely",
+          "Fajr Reciter Mapping — Resolve Fajr-specific recordings before generic reciter matching",
+          "Quran Learning Sections — Add direct home-screen access to the Tajweed Rules Guide and Qira’at & Riwayat"
+        ],
+        "ar": [
+          "تشغيل الأذان بثبات — إبقاء تشغيل الصوت في الخلفية عبر خدمة أمامية مخصصة، ومعالجة تعذّر فتح ملف الصوت بالطريقة المباشرة",
+          "إصلاح أذان الفجر — إعطاء الأولوية لملفات الفجر الخاصة عند تحديد صوت المؤذن",
+          "أقسام جديدة للتعلّم القرآني — إضافة وصول مباشر من الرئيسية إلى دليل أحكام التجويد وقسم القراءات والروايات"
+        ]
+      }
+    },
+    {
       "version": "1.6.0",
       "date": "2026-11-06",
       "title": "Sheikh Ahmed Voice Hifz, Reciter Selection & Performance Refresh",
